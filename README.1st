@@ -1,19 +1,18 @@
 QUADcore tool
 
-This is part of the QUAD Toolset project, developed by Arash Ostadzadeh as the dynamic profiling part of the Delft WorkBench (DWB) in the Computer Science and Engineering Group of the Delft University of Technology.
+This is part of the QUAD Toolset project, developed by Arash Ostadzadeh.
 
 The tool is open source and provided under the GNU Lesser General Public License (LGPL), specifically for academic (non-commercial) purposes.
 
 QUADcore has been deliberately maintained in a separate directory with the aim to offer simplicity and ease of use for experimental academic purposes, meanwhile, to provide the primary functionality of the QUAD toolset.
 
-To use the complete QUAD toolset refer to the 'QUAD' directory on the SVN.
+To use the complete QUAD toolset refer to the 'QUAD' project on sourceforge.
 
 QUAD Toolset
 http://sourceforge.net/projects/quadtoolset
 
-Copyright © 2008-2011 Arash Ostadzadeh 
-http://ce.et.tudelft.nl/~arash/
-
+Copyright © 2008-2013 Arash Ostadzadeh 
+http://www.ce.ewi.tudelft.nl/ostadzadeh/
 
 Description
 ===========
@@ -106,13 +105,13 @@ The elements that are written in the XML file are stored under the root element,
                 <PRODUCER>x264_validate_parameters</PRODUCER>
                 <CONSUMER>x264_ratecontrol_new</CONSUMER>
                 <DATA_TRANSFER>72</DATA_TRANSFER>
-                <UMA>72</UMA>
+                <UnMA>72</UnMA>
             </BINDING>
             <BINDING>
                 <PRODUCER>x264_validate_parameters</PRODUCER>
                 <CONSUMER>x264_macroblock_cache_load</CONSUMER>
                 <DATA_TRANSFER>28800</DATA_TRANSFER>
-                <UMA>464</UMA>
+                <UnMA>464</UnMA>
             </BINDING>
              .
              .
@@ -139,27 +138,27 @@ CONSUMER -> The name of the function who is responsible for reading from that me
 
 DATA_TRANSFER -> The total amount of data being read in this fashion (note that if the same memory location is read 100 times, it is regarded as 100 bytes binding).
 
-UMA -> This value shows the number of unique memory addresses used for this transfer, it could be regarded as the actual size of memory buffer needed for the data transfer.
+UnMA -> This value shows the number of unique memory addresses used for this transfer, it could be regarded as the actual size of memory buffer needed for the data transfer.
 
 2. 'QDUGraph.dot' is output for visualization and contains all the binding information which is contained in the main XML file. For further details, refer to 'Output Visualization' section in the following.
 
-3. Summary report file ('ML_OV_Summary.txt') is also created containing information about the functions specified in a monitor list, only in case the user has specified the relevant option in the command line. This text file basically provides statistics on total bytes/UMA for selected functions. There are eight different values that are explained in the following.
+3. Summary report file ('ML_OV_Summary.txt') is also created containing information about the functions specified in a monitor list, only in case the user has specified the relevant option in the command line. This text file basically provides statistics on total bytes/UnMA for selected functions. There are eight different values that are explained in the following.
 
 IN_ML -> Total number of bytes read by this function that a function in the monitor list is responsible for producing the value(s) of the byte(s)
 
-IN_ML_UMA -> Total number of unique memory addresses used corresponding to 'IN_ML'
+IN_ML_UnMA -> Total number of unique memory addresses used corresponding to 'IN_ML'
 
 OUT_ML -> Total number of bytes read by a function in the monitor list that this function is responsible for producing the value(s) of the byte(s)
 
-OUT_ML_UMA -> Total number of unique memory addresses used corresponding to 'OUT_ML'
+OUT_ML_UnMA -> Total number of unique memory addresses used corresponding to 'OUT_ML'
 
 IN_ALL -> Total number of bytes read by this function that a function in the application is responsible for producing the value(s) of the byte(s)
 
-IN_ALL_UMA -> Total number of unique memory addresses used corresponding to 'IN_ALL'
+IN_ALL_UnMA -> Total number of unique memory addresses used corresponding to 'IN_ALL'
 
 OUT_ALL -> Total number of bytes read by a function in the application that this function is responsible for producing the value(s) of the byte(s)
 
-OUT_ALL_UMA -> Total number of unique memory addresses used corresponding to 'OUT_ALL'
+OUT_ALL_UnMA -> Total number of unique memory addresses used corresponding to 'OUT_ALL'
 
 
 Output Visualization
@@ -174,6 +173,11 @@ dot -Tpdf QDUGraph.dot -O
 
 QUADcore revision history
 =========================
+
+v2.0
+------
+The initial version of the QUAD v2.0 core module, which is responsible for the critical task of Memory Access Tracing (MAT) during the instrumentation, is implemented and is currently being tested for performance and accuracy of extracted profiling data. In comparison with the primary implementation of QUAD, two main causes of performance issues are addressed to improve both the instrumentation time and the required memory footprint to trace accesses.
+
 
 v0.4.3
 ------
