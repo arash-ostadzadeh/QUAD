@@ -1,28 +1,27 @@
 /*
-
-QUADcore v0.4.3
-final revision January 19th, 2011
+QUAD v2.0
+final revision October 9th, 2013
 
 This tool is part of QUAD Toolset
 http://sourceforge.net/projects/quadtoolset
 
-Copyright © 2008-2011 Arash Ostadzadeh (ostadzadeh@gmail.com)
-http://ce.et.tudelft.nl/~arash/
+Copyright © 2008-2013 Arash Ostadzadeh (ostadzadeh@gmail.com)
+http://www.ce.ewi.tudelft.nl/ostadzadeh/
+
+This file is part of QUAD toolset.
 
 
-This file is part of QUADcore.
-
-QUADcore is free software: you can redistribute it and/or modify 
+QUAD is free software: you can redistribute it and/or modify 
 it under the terms of the GNU Lesser General Public License as 
 published by the Free Software Foundation, either version 3 of 
 the License, or (at your option) any later version.
 
-QUADcore is distributed in the hope that it will be useful, but 
+QUAD is distributed in the hope that it will be useful, but 
 WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY 
 or FITNESS FOR A PARTICULAR PURPOSE.  
 
 See the GNU Lesser General Public License for more details. You should have 
-received a copy of the GNU Lesser General Public License along with QUADcore.
+received a copy of the GNU Lesser General Public License along with QUAD.
 If not, see <http://www.gnu.org/licenses/>.
 
 --------------
@@ -55,12 +54,10 @@ THE POSSIBILITY OF SUCH DAMAGE.
 
 //==============================================================================
 /* tracing.cpp: 
- * This file contains the main memory access tracing routines for the QUADcore 
- * tool which detects the actual data dependencies between the functions in a 
- * program.
+ * This file is part of QUAD.
  *
  *  Author: Arash Ostadzadeh
- *  Lastly revised on 19-01-2011
+ *  Lastly revised on 9-10-2013
 */
 //==============================================================================
 
@@ -71,40 +68,19 @@ THE POSSIBILITY OF SUCH DAMAGE.
 #define min(a,b) ((a)<(b)?(a):(b))
 
 
-typedef ADDRINT addr_t;
 FILE* gfp,*ufa;
 bool First_Rec_in_XML = true;
 TiXmlNode* Put_QUAD_here=NULL;
 
-addr_t MaxLabel=0;
+uint64_t MaxLabel=0;
 
-struct trieNode {
-    struct trieNode * list[16];
-} *trieRoot=NULL,*graphRoot=NULL,*uflist=NULL;
+struct trieNode *graphRoot=NULL,*uflist=NULL;
 
-struct AddressSplitter
-{
-    unsigned int h0:4;
-    unsigned int h1:4;
-    unsigned int h2:4;
-    unsigned int h3:4;
-    unsigned int h4:4;
-    unsigned int h5:4;
-    unsigned int h6:4;
-    unsigned int h7:4;
-};
 
-// structure definition to keep track of producer->consumer Bindings! (number of bytes, the memory addresses used for exchange ...)
-typedef struct 
- {
-	unsigned long int data_exchange;
-	ADDRINT producer;
-	ADDRINT consumer;
-	set<ADDRINT>* UniqueMemCells;
-} Binding;
 
-//------------------------------------------------------------------------------------------
-void Put_Binding_in_XML_file(string producer,string consumer,unsigned long int bytes,unsigned long int u_m_a)
+
+//==============================================================================
+void Put_Binding_in_XML_file(string producer,string consumer,uint64_t bytes,uint64_t unma)
 {
   if (First_Rec_in_XML)  // check to make sure <PROFILE> exists and create the <QUAD> element...
   {	  
@@ -130,9 +106,9 @@ void Put_Binding_in_XML_file(string producer,string consumer,unsigned long int b
 
   char buffer1 [20],buffer2[20];
   sprintf(buffer1,"%lu", bytes);
-  sprintf(buffer2,"%lu", u_m_a);
+  sprintf(buffer2,"%lu", unma);
   	  
-  TiXmlElement BINDING_tag("BINDING"),PRODUCER_tag("PRODUCER"),CONSUMER_tag("CONSUMER"),DATA_TRANSFER_tag("DATA_TRANSFER"),UMA_tag("UMA");
+  TiXmlElement BINDING_tag("BINDING"),PRODUCER_tag("PRODUCER"),CONSUMER_tag("CONSUMER"),DATA_TRANSFER_tag("DATA_TRANSFER"),UnMA_tag("UnMA");
   TiXmlText pro_text(producer),con_text(consumer),data_transfer_text(buffer1),uma_text(buffer2);
 
   TiXmlNode* Current_binding; 
@@ -141,38 +117,39 @@ void Put_Binding_in_XML_file(string producer,string consumer,unsigned long int b
   (Current_binding->InsertEndChild(PRODUCER_tag))->InsertEndChild(pro_text);
   (Current_binding->InsertEndChild(CONSUMER_tag))->InsertEndChild(con_text);
   (Current_binding->InsertEndChild(DATA_TRANSFER_tag))->InsertEndChild(data_transfer_text);
-  (Current_binding->InsertEndChild(UMA_tag))->InsertEndChild(uma_text);
+  (Current_binding->InsertEndChild(UnMA_tag))->InsertEndChild(uma_text);
   
   if (xmldoc.Error())	
   	cerr << xmldoc.ErrorDesc() << endl ;
 }
 
-void Update_total_statistics(string producer,string consumer,unsigned long int bytes,
-			     unsigned long int u_m_a,bool p_f,bool c_f)
+//==============================================================================
+void Update_total_statistics(string producer,string consumer,uint64_t bytes,uint64_t unma,bool p_f,bool c_f)
 {
 	if(p_f)
 	{
 		ML_OUTPUT[producer]->total_OUT_ALL+=bytes;
-		ML_OUTPUT[producer]->total_OUT_ALL_UMA+=u_m_a;	
+		ML_OUTPUT[producer]->total_OUT_ALL_UnMA+=unma;	
 		ML_OUTPUT[producer]->consumers.push_back(consumer);	 // update the list of consumers for the particular producer in the ML
 	}
 	
 	if(c_f)
 	{
 		ML_OUTPUT[consumer]->total_IN_ALL+=bytes;
-		ML_OUTPUT[consumer]->total_IN_ALL_UMA+=u_m_a;
+		ML_OUTPUT[consumer]->total_IN_ALL_UnMA+=unma;
 		ML_OUTPUT[consumer]->producers.push_back(producer);	 // update the list of producers for the particular consumer in the ML
 	}
 	
 	if(p_f && c_f)
 	{
 		ML_OUTPUT[producer]->total_OUT_ML+=bytes;
-		ML_OUTPUT[producer]->total_OUT_ML_UMA+=u_m_a;
+		ML_OUTPUT[producer]->total_OUT_ML_UnMA+=unma;
 		ML_OUTPUT[consumer]->total_IN_ML+=bytes;
-		ML_OUTPUT[consumer]->total_IN_ML_UMA+=u_m_a;
+		ML_OUTPUT[consumer]->total_IN_ML_UnMA+=unma;
 	}
 }
 
+//==============================================================================
 int CreateTotalStatFile()
 {
     ofstream out;
@@ -196,13 +173,13 @@ int CreateTotalStatFile()
     cerr << "\nCreating summary report file (ML_OV_Summary.txt) containing information about the functions specified in the monitor list..." << endl;
 
     out<<setw(30)<<setiosflags(ios::left)<<"Function"<<setw(12)<<"   IN_ML"
-    <<setw(12)<<" IN_ML_UMA"
+    <<setw(12)<<" IN_ML_UnMA"
     <<setw(12)<<"  OUT_ML"
-    <<setw(12)<<"OUT_ML_UMA"
+    <<setw(12)<<"OUT_ML_UnMA"
     <<setw(12)<<"  IN_ALL"
-    <<setw(12)<<"IN_ALL_UMA"
+    <<setw(12)<<"IN_ALL_UnMA"
     <<setw(12)<<"  OUT_ALL"
-    <<setw(12)<<"OUT_ALL_UMA"
+    <<setw(12)<<"OUT_ALL_UnMA"
     <<endl;
 
     out<<setw(30)<<"-----------------------------"<<setw(12)<<"-----------"
@@ -221,13 +198,13 @@ int CreateTotalStatFile()
      out << setw(30) << setiosflags(ios::left) << pIter -> first;
      
      out << setw(11) << setiosflags(ios::right) << pIter->second->total_IN_ML << " " <<
-	    setw(11) << pIter->second->total_IN_ML_UMA << " " <<
+	    setw(11) << pIter->second->total_IN_ML_UnMA << " " <<
 	    setw(11) << pIter->second->total_OUT_ML << " " << 
-	    setw(11) << pIter->second->total_OUT_ML_UMA << " " <<
+	    setw(11) << pIter->second->total_OUT_ML_UnMA << " " <<
 	    setw(11) << pIter->second->total_IN_ALL << " " <<
-	    setw(11) << pIter->second->total_IN_ALL_UMA << " " <<
+	    setw(11) << pIter->second->total_IN_ALL_UnMA << " " <<
 	    setw(11) << pIter->second->total_OUT_ALL << " " <<
-	    setw(11) << pIter->second->total_OUT_ALL_UMA << endl ;
+	    setw(11) << pIter->second->total_OUT_ALL_UnMA << endl ;
 	    
      
      out.unsetf(ios::right);
@@ -263,27 +240,27 @@ int CreateTotalStatFile()
    
     out << endl << "--" << endl;
     out << "IN_ML -> Total number of bytes read by this function that a function in the monitor list is responsible for producing the value(s) of the byte(s)" << endl;
-    out << "IN_ML_UMA -> Total number of unique memory addresses used corresponding to 'IN_ML'" << endl;
+    out << "IN_ML_UnMA -> Total number of unique memory addresses used corresponding to 'IN_ML'" << endl;
     out << "OUT_ML -> Total number of bytes read by a function in the monitor list that this function is responsible for producing the value(s) of the byte(s)" << endl;
-    out << "OUT_ML_UMA -> Total number of unique memory addresses used corresponding to 'OUT_ML'" << endl;
+    out << "OUT_ML_UnMA -> Total number of unique memory addresses used corresponding to 'OUT_ML'" << endl;
     
     out << "IN_ALL -> Total number of bytes read by this function that a function in the application is responsible for producing the value(s) of the byte(s)" << endl;
-    out << "IN_ALL_UMA -> Total number of unique memory addresses used corresponding to 'IN_ALL'" << endl;
+    out << "IN_ALL_UnMA -> Total number of unique memory addresses used corresponding to 'IN_ALL'" << endl;
     out << "OUT_ALL -> Total number of bytes read by a function in the application that this function is responsible for producing the value(s) of the byte(s)" << endl;
-    out << "OUT_ALL_UMA -> Total number of unique memory addresses used corresponding to 'OUT_ALL'" << endl;
+    out << "OUT_ALL_UnMA -> Total number of unique memory addresses used corresponding to 'OUT_ALL'" << endl;
     
     
     out.close();
     return 0;
 }	
 
-
-int IsNewFunc(ADDRINT fadd)
+//==============================================================================
+int IsNewFunc(uint32_t funcID)
 {
     int currentLevel=0;
     int i;
     struct trieNode* currentLP;
-    struct AddressSplitter* ASP= (struct AddressSplitter *)&fadd;
+    struct AddressSplitter* ASP= (struct AddressSplitter *)&funcID;
     
     unsigned int addressArray[8];
     
@@ -324,7 +301,7 @@ int IsNewFunc(ADDRINT fadd)
     return 0; /* function address exists in the list */
 }
 
-
+//==============================================================================
 void recTrieTraverse(struct trieNode* current,int level)
 {
     int i;
@@ -361,16 +338,16 @@ void recTrieTraverse(struct trieNode* current,int level)
                 	{
 				fprintf(gfp,"\"%08x\" [label=\"%s\"];\n", (unsigned int)temp->consumer , name3.c_str());
                		}
-			color = (int) (  1023 *  log((double)(temp->data_exchange)) / log((double)MaxLabel)  ); 
-			fprintf(gfp,"\"%08x\" -> \"%08x\"  [label=\"%lu bytes (%lu UMA)\" color=\"#%02x%02x%02x\"]\n",(unsigned int)temp->producer,(unsigned int)temp->consumer,temp->data_exchange,(unsigned long int)temp->UniqueMemCells->size(), max(0,color-768),min(255,512-abs(color-512)), max(0,min(255,512-color)));
+			color = (int) (  1023 *  log((double)(temp->bytes)) / log((double)MaxLabel)  ); 
+			fprintf(gfp,"\"%08x\" -> \"%08x\"  [label=\"%lu bytes (%lu UnMA)\" color=\"#%02x%02x%02x\"]\n",(unsigned int)temp->producer,(unsigned int)temp->consumer,temp->bytes,(unsigned long int)temp->UnMA->size(), max(0,color-768),min(255,512-abs(color-512)), max(0,min(255,512-color)));
 			
-			Put_Binding_in_XML_file(name2,name3,temp->data_exchange,temp->UniqueMemCells->size());
+			Put_Binding_in_XML_file(name2,name3,temp->bytes,temp->UnMA->size());
 			
 			if (Monitor_ON)  // do we need the total statistics file always or not? ... should be modified if we need this in any case... do not forget to make also the relevant modifications in the monitor list input file processing ... this can also be moved up in the previous condition if we need output file only when monitor list is specified!
 			
 			Update_total_statistics(
-						name2,name3,temp->data_exchange,
-					        temp->UniqueMemCells->size(),
+						name2,name3,temp->bytes,
+					        temp->UnMA->size(),
 					        producer_in_ML,consumer_in_ML
 					       );
 		   
@@ -386,7 +363,7 @@ void recTrieTraverse(struct trieNode* current,int level)
   return;
 }
 		  
-
+//==============================================================================
 int CreateDSGraphFile()
 {
    int i;
@@ -421,8 +398,8 @@ int CreateDSGraphFile()
    return 0;
 }                                               
 
-
-int RecordCommunicationInDSGraph(ADDRINT producer, ADDRINT consumer, ADDRINT addy)
+//==============================================================================
+MAT_ERR_TYPE  RecordBindingInQDUGraph(uint32_t producer, uint32_t consumer, ADDRINT addy, uint8_t size)
 {
     int currentLevel=0;
     Binding* tempptr;
@@ -467,7 +444,7 @@ int RecordCommunicationInDSGraph(ADDRINT producer, ADDRINT consumer, ADDRINT add
     {
         if(! (currentLP->list[addressArray[currentLevel]]) ) /* create new level on demand */
         {
-                if(!(currentLP->list[addressArray[currentLevel]]=(struct trieNode*)malloc(sizeof(struct trieNode))) ) return 1; /* memory allocation failed*/
+                if(!(currentLP->list[addressArray[currentLevel]]=(struct trieNode*)malloc(sizeof(struct trieNode))) ) return BINDING_RECORD_FAIL; /* memory allocation failed*/
                 else
                        for (i=0;i<16;i++) 
                               (currentLP->list[addressArray[currentLevel]])->list[i]=NULL;
@@ -480,88 +457,27 @@ int RecordCommunicationInDSGraph(ADDRINT producer, ADDRINT consumer, ADDRINT add
     
     if( currentLP->list[addressArray[currentLevel]] == NULL ) /* create new bucket to store number of accesses between the two functions*/
     {
-        if(!(  currentLP->list[addressArray[currentLevel]] = (trieNode *)malloc(sizeof(Binding)) ) ) return 1; /* memory allocation failed*/
+        if(!(  currentLP->list[addressArray[currentLevel]] = (trieNode *)malloc(sizeof(Binding)) ) ) return BINDING_RECORD_FAIL; /* memory allocation failed*/
         else 
         {
             tempptr=(Binding*) ( currentLP->list[addressArray[currentLevel]] );
 
-			tempptr->data_exchange=0;  /* set number of times to zero */
+			tempptr->bytes=0;  /* set number of times to zero */
 			tempptr->producer=producer;
 			tempptr->consumer=consumer;
-			tempptr->UniqueMemCells=new set<ADDRINT>;
-			if (!tempptr->UniqueMemCells) return 1; /* memory allocation failed*/
+                           tempptr->DCC_file_ptr_idx=0;     // the DCC is not monitored for now!! ****
+			tempptr->UnMA=new set<ADDRINT>;
+			if (!tempptr->UnMA) return BINDING_RECORD_FAIL; /* memory allocation failed*/
     	}	
     }
 	
 	tempptr=(Binding*) ( currentLP->list[addressArray[currentLevel]] );
-	tempptr->data_exchange=tempptr->data_exchange+1;
-	if (tempptr->data_exchange > MaxLabel) MaxLabel=tempptr->data_exchange; // only needed for graph visualization coloring!
-	tempptr->UniqueMemCells->insert(addy);
+	tempptr->bytes=tempptr->bytes+size;
+	if (tempptr->bytes > MaxLabel) MaxLabel=tempptr->bytes; // only needed for graph visualization coloring!
+	tempptr->UnMA->insert(addy);
 
-	//****************************** what to do if insertion is not successful, memory problems!!!!!!!!!!!!
+	//****   what to do if insertion is not successful, memory problems!!!!!!!!!!!!
 	
-    return 0; /* successful recording */
+    return SUCCESS; /* successful recording */
 }
-
-
-int RecordMemoryAccess(ADDRINT addy, ADDRINT func,bool writeFlag)
-{
-    int currentLevel=0;
-    int i,retv;
-    struct trieNode* currentLP;
-    struct AddressSplitter* ASP= (struct AddressSplitter *)&addy;
-    
-    unsigned int addressArray[8];
-    
-    addressArray[0]=ASP->h0;
-    addressArray[1]=ASP->h1;
-    addressArray[2]=ASP->h2;
-    addressArray[3]=ASP->h3;
-    addressArray[4]=ASP->h4;
-    addressArray[5]=ASP->h5;
-    addressArray[6]=ASP->h6;
-    addressArray[7]=ASP->h7;
-
-
-
-    
-    if(!trieRoot)  /* create the first level in trie */
-    {
-            if(!(trieRoot=(struct trieNode*)malloc(sizeof(struct trieNode)) ) ) return 1; /* memory allocation failed*/
-            else
-                       for (i=0;i<16;i++) 
-                              trieRoot->list[i]=NULL;
-    }
-            
-    currentLP=trieRoot;                
-    while(currentLevel<7)  /* proceed to the last level */
-    {
-        if(! (currentLP->list[addressArray[currentLevel]]) ) /* create new level on demand */
-        {
-                if(!(currentLP->list[addressArray[currentLevel]]=(struct trieNode*)malloc(sizeof(struct trieNode))) ) return 1; /* memory allocation failed*/
-                else
-                       for (i=0;i<16;i++) 
-                              (currentLP->list[addressArray[currentLevel]])->list[i]=NULL;
-        }
-        
-        currentLP=currentLP->list[addressArray[currentLevel]];
-        currentLevel++;
-    }            
-    
-    if(!currentLP->list[addressArray[currentLevel]]) /* create new bucket to store last function's access to this memory location */
-    {
-        if(!(currentLP->list[addressArray[currentLevel]]=(struct trieNode*)malloc(sizeof(ADDRINT)) ) ) return 1; /* memory allocation failed*/
-        else *((ADDRINT*) (currentLP->list[addressArray[currentLevel]]) )=0; /* no write access has been recorded yet!!! */
-    }           
-    if (writeFlag)
-            *((ADDRINT*) (currentLP->list[addressArray[currentLevel]])  )=func;  /* only record the last function's write to a memory location?!! */
-        
-    else 
-    	{
-
-			retv=RecordCommunicationInDSGraph(*((ADDRINT*) (currentLP->list[addressArray[currentLevel]]) ),func,addy); /* producer -> consumer , and the address used for making this binding! */
-    		if (retv) return 1; /* memory exhausted */
-    	}
-
-    return 0; /* successful trace */
-}
+//==============================================================================

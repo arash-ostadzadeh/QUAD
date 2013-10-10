@@ -1,28 +1,28 @@
 /*
 
-QUADcore v0.4.3
-final revision January 19th, 2011
+QUAD v2.0
+final revision October 9th, 2013
 
 This tool is part of QUAD Toolset
 http://sourceforge.net/projects/quadtoolset
 
-Copyright © 2008-2011 Arash Ostadzadeh (ostadzadeh@gmail.com)
-http://ce.et.tudelft.nl/~arash/
+Copyright © 2008-2013 Arash Ostadzadeh (ostadzadeh@gmail.com)
+http://www.ce.ewi.tudelft.nl/ostadzadeh/
+
+This file is part of QUAD toolset.
 
 
-This file is part of QUADcore.
-
-QUADcore is free software: you can redistribute it and/or modify 
+QUAD is free software: you can redistribute it and/or modify 
 it under the terms of the GNU Lesser General Public License as 
 published by the Free Software Foundation, either version 3 of 
 the License, or (at your option) any later version.
 
-QUADcore is distributed in the hope that it will be useful, but 
+QUAD is distributed in the hope that it will be useful, but 
 WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY 
 or FITNESS FOR A PARTICULAR PURPOSE.  
 
 See the GNU Lesser General Public License for more details. You should have 
-received a copy of the GNU Lesser General Public License along with QUADcore.
+received a copy of the GNU Lesser General Public License along with QUAD.
 If not, see <http://www.gnu.org/licenses/>.
 
 --------------
@@ -55,14 +55,13 @@ THE POSSIBILITY OF SUCH DAMAGE.
 
 //==============================================================================
 /* QUADcore.cpp: 
- * This file contains the main routines for the QUAD core tool which detects the 
- * actual data dependencies between the functions in a program.
+ * This file is part of QUAD.
  *
- *  Authors: Arash Ostadzadeh
- *           Roel Meeuws
- *  Lastly revised on 19-01-2011
+ *  Author: Arash Ostadzadeh
+ *  Lastly revised on 9-10-2013
 */
 //==============================================================================
+
 
 
 // when a monitor file is provided, a list of communicating functions with each kernel is extracted from the profile data and stored
@@ -109,6 +108,11 @@ THE POSSIBILITY OF SUCH DAMAGE.
 #else 
 #define DELIMITER_CHAR '/'
 #endif
+
+
+/* ===================================================================== */
+#include "MAT.cpp"
+/* ===================================================================== */
 
 
 

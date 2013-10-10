@@ -1,31 +1,30 @@
 /*
-
-QUADcore v0.4.3
-final revision January 19th, 2011
+QUAD v2.0
+final revision October 9th, 2013
 
 This tool is part of QUAD Toolset
 http://sourceforge.net/projects/quadtoolset
 
-Copyright © 2008-2011 Arash Ostadzadeh (ostadzadeh@gmail.com)
-http://ce.et.tudelft.nl/~arash/
+Copyright © 2008-2013 Arash Ostadzadeh (ostadzadeh@gmail.com)
+http://www.ce.ewi.tudelft.nl/ostadzadeh/
+
+This file is part of QUAD toolset.
 
 
-This file is part of QUADcore.
-
-QUADcore is free software: you can redistribute it and/or modify 
+QUAD is free software: you can redistribute it and/or modify 
 it under the terms of the GNU Lesser General Public License as 
 published by the Free Software Foundation, either version 3 of 
 the License, or (at your option) any later version.
 
-QUADcore is distributed in the hope that it will be useful, but 
+QUAD is distributed in the hope that it will be useful, but 
 WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY 
 or FITNESS FOR A PARTICULAR PURPOSE.  
 
 See the GNU Lesser General Public License for more details. You should have 
-received a copy of the GNU Lesser General Public License along with QUADcore.
+received a copy of the GNU Lesser General Public License along with QUAD.
 If not, see <http://www.gnu.org/licenses/>.
 
-
+--------------
 <LEGAL NOTICE>
 --------------
 Redistribution and use in source and binary forms, with or without
@@ -53,6 +52,16 @@ THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 
+//==============================================================================
+/* tracing.h: 
+ * This file is part of QUAD.
+ *
+ *  Author: Arash Ostadzadeh
+ *  Lastly revised on 9-10-2013
+*/
+//==============================================================================
+
+
 #ifndef __TRACING__H__
 #define __TRACING__H__
 
@@ -66,7 +75,13 @@ THE POSSIBILITY OF SUCH DAMAGE.
 #define NULL 0L
 #endif
 
+
+void Put_Binding_in_XML_file(string producer,string consumer,uint64_t bytes,uint64_t unma);
+void Update_total_statistics(string producer,string consumer,uint64_t bytes,uint64_t unma,bool p_f,bool c_f);
+int CreateTotalStatFile();
+int IsNewFunc(uint32_t funcID);
+void recTrieTraverse(struct trieNode* current,int level);
 int CreateDSGraphFile();
-int RecordMemoryAccess(long int,long int,long int);
+MAT_ERR_TYPE  RecordBindingInQDUGraph(uint32_t producer, uint32_t consumer, ADDRINT addy, uint8_t size);
 
 #endif //__TRACING__H__
