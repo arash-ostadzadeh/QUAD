@@ -139,7 +139,7 @@ MAT::MAT ( const char* QDUG_filename="QDUG.dot", const char* Binding_XML_filenam
     // if (MAT::DCC_flat_profile_flag) { }
 }
 
-MAT_ERR_TYPE  MAT::Add_DCC_Binding ( unsigned short producer, unsigned short consumer )
+MAT_ERR_TYPE  MAT::Add_DCC_Binding ( uint16_t producer, uint16_t consumer )
 {
     DCC_binding temp;
     ofstream out;
@@ -513,79 +513,4 @@ MAT_ERR_TYPE  MAT::WriteAccess ( uint16_t func, ADDRINT add, uint8_t size )
     }   // end of the trie bucket already exists
 
 return  SUCCESS;    // The write access was successfully recorded in the trie
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/****************************************************************************************************************************************************/
-/*  This function returns 0 if the branch instruction does not exist in the table, otherwise the recorded destination address is returned.    */
-/****************************************************************************************************************************************************/
-
-ADDRINT SearchBranchLookUpTable(ADDRINT ip, BRNCHTYPE bt)
-{
-    static int MaxLevel=( sizeof(void*)==4? 8 : 16 );
-    
-    int i,currentLevel=0;
-    struct trieNode* currentLP;
-    AddressSplitter* ASP= (AddressSplitter *)&ip;
-    
-    unsigned int addressArray[16]={0};
-    
-    addressArray[0]=ASP->h0;
-    addressArray[1]=ASP->h1;
-    addressArray[2]=ASP->h2;
-    addressArray[3]=ASP->h3;
-    addressArray[4]=ASP->h4;
-    addressArray[5]=ASP->h5;
-    addressArray[6]=ASP->h6;
-    addressArray[7]=ASP->h7;
-    
-    if (MaxLevel==16)  // for 64-bit IPs
-    {
-        addressArray[8]=ASP->h8;
-        addressArray[9]=ASP->h9;
-        addressArray[10]=ASP->h10;
-        addressArray[11]=ASP->h11;
-        addressArray[12]=ASP->h12;
-        addressArray[13]=ASP->h13;
-        addressArray[14]=ASP->h14;
-        addressArray[15]=ASP->h15;
-    }
-
-
-   if(!trieRoot[bt])  return 0;  /* no data exists for such a branch type */
-            
-   currentLP=trieRoot[bt];  /* select the corresponding BranchType root  (14 different types) */
-   
-    while(currentLevel<MaxLevel-1)  /* proceed until the last level */
-    {
-        if(! (currentLP->list[addressArray[currentLevel]]) ) /* no instruction is found with this ip in the trie */
-           return 0;  /* not found */
-        
-        currentLP=currentLP->list[addressArray[currentLevel]];
-        currentLevel++;
-    }            
-   
-    if ( currentLP->list[addressArray[currentLevel]] ) 
-        return *( (ADDRINT*) (currentLP->list[addressArray[currentLevel]]) ); /* successful trace, the original destination address is returned */
-    else return 0; /* not found */
 }

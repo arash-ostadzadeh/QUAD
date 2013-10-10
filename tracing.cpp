@@ -105,8 +105,8 @@ void Put_Binding_in_XML_file(string producer,string consumer,uint64_t bytes,uint
   }
 
   char buffer1 [20],buffer2[20];
-  sprintf(buffer1,"%lu", bytes);
-  sprintf(buffer2,"%lu", unma);
+  sprintf(buffer1,"%llu", bytes);
+  sprintf(buffer2,"%llu", unma);
   	  
   TiXmlElement BINDING_tag("BINDING"),PRODUCER_tag("PRODUCER"),CONSUMER_tag("CONSUMER"),DATA_TRANSFER_tag("DATA_TRANSFER"),UnMA_tag("UnMA");
   TiXmlText pro_text(producer),con_text(consumer),data_transfer_text(buffer1),uma_text(buffer2);
@@ -255,26 +255,22 @@ int CreateTotalStatFile()
 }	
 
 //==============================================================================
-int IsNewFunc(uint32_t funcID)
+int IsNewFunc(uint16_t funcID)
 {
     int currentLevel=0;
     int i;
     struct trieNode* currentLP;
     struct AddressSplitter* ASP= (struct AddressSplitter *)&funcID;
     
-    unsigned int addressArray[8];
+    unsigned int addressArray[4];
     
     addressArray[0]=ASP->h0;
     addressArray[1]=ASP->h1;
     addressArray[2]=ASP->h2;
     addressArray[3]=ASP->h3;
-    addressArray[4]=ASP->h4;
-    addressArray[5]=ASP->h5;
-    addressArray[6]=ASP->h6;
-    addressArray[7]=ASP->h7;
     
     currentLP=uflist;                
-    while(currentLevel<7)  /* proceed to the last level */
+    while(currentLevel<3)  /* proceed to the last level */
     {
         if(! (currentLP->list[addressArray[currentLevel]]) ) /* create new level on demand */
         {
@@ -339,15 +335,15 @@ void recTrieTraverse(struct trieNode* current,int level)
 				fprintf(gfp,"\"%08x\" [label=\"%s\"];\n", (unsigned int)temp->consumer , name3.c_str());
                		}
 			color = (int) (  1023 *  log((double)(temp->bytes)) / log((double)MaxLabel)  ); 
-			fprintf(gfp,"\"%08x\" -> \"%08x\"  [label=\"%lu bytes (%lu UnMA)\" color=\"#%02x%02x%02x\"]\n",(unsigned int)temp->producer,(unsigned int)temp->consumer,temp->bytes,(unsigned long int)temp->UnMA->size(), max(0,color-768),min(255,512-abs(color-512)), max(0,min(255,512-color)));
+			fprintf(gfp,"\"%08x\" -> \"%08x\"  [label=\"%llu bytes (%llu UnMA)\" color=\"#%02x%02x%02x\"]\n",(unsigned int)temp->producer,(unsigned int)temp->consumer,temp->bytes,(uint64_t) temp->UnMA->size(), max(0,color-768),min(255,512-abs(color-512)), max(0,min(255,512-color)));
 			
-			Put_Binding_in_XML_file(name2,name3,temp->bytes,temp->UnMA->size());
+			Put_Binding_in_XML_file(name2,name3,temp->bytes,(uint64_t) temp->UnMA->size());
 			
 			if (Monitor_ON)  // do we need the total statistics file always or not? ... should be modified if we need this in any case... do not forget to make also the relevant modifications in the monitor list input file processing ... this can also be moved up in the previous condition if we need output file only when monitor list is specified!
 			
 			Update_total_statistics(
 						name2,name3,temp->bytes,
-					        temp->UnMA->size(),
+					        (uint64_t) temp->UnMA->size(),
 					        producer_in_ML,consumer_in_ML
 					       );
 		   
@@ -399,7 +395,7 @@ int CreateDSGraphFile()
 }                                               
 
 //==============================================================================
-MAT_ERR_TYPE  RecordBindingInQDUGraph(uint32_t producer, uint32_t consumer, ADDRINT addy, uint8_t size)
+MAT_ERR_TYPE  RecordBindingInQDUGraph(uint16_t producer, uint16_t consumer, ADDRINT add, uint8_t size)
 {
     int currentLevel=0;
     Binding* tempptr;
@@ -407,27 +403,19 @@ MAT_ERR_TYPE  RecordBindingInQDUGraph(uint32_t producer, uint32_t consumer, ADDR
     struct trieNode* currentLP;
     struct AddressSplitter* ASP= (struct AddressSplitter *)&producer;
     
-    unsigned int addressArray[16];
+    unsigned int addressArray[8];
     
     addressArray[0]=ASP->h0;
     addressArray[1]=ASP->h1;
     addressArray[2]=ASP->h2;
     addressArray[3]=ASP->h3;
-    addressArray[4]=ASP->h4;
-    addressArray[5]=ASP->h5;
-    addressArray[6]=ASP->h6;
-    addressArray[7]=ASP->h7;
 
-	ASP=(struct AddressSplitter *)&consumer;
+    ASP=(struct AddressSplitter *)&consumer;
 
-    addressArray[8]=ASP->h0;
-    addressArray[9]=ASP->h1;
-    addressArray[10]=ASP->h2;
-    addressArray[11]=ASP->h3;
-    addressArray[12]=ASP->h4;
-    addressArray[13]=ASP->h5;
-    addressArray[14]=ASP->h6;
-    addressArray[15]=ASP->h7;
+    addressArray[4]=ASP->h0;
+    addressArray[5]=ASP->h1;
+    addressArray[6]=ASP->h2;
+    addressArray[7]=ASP->h3;
     
 
     if(!graphRoot)  /* create the first level in graph trie */
@@ -440,7 +428,7 @@ MAT_ERR_TYPE  RecordBindingInQDUGraph(uint32_t producer, uint32_t consumer, ADDR
     }                         
             
     currentLP=graphRoot;                
-    while(currentLevel<15)  /* proceed to the last level */
+    while(currentLevel<7)  /* proceed to the last level */
     {
         if(! (currentLP->list[addressArray[currentLevel]]) ) /* create new level on demand */
         {
@@ -474,7 +462,7 @@ MAT_ERR_TYPE  RecordBindingInQDUGraph(uint32_t producer, uint32_t consumer, ADDR
 	tempptr=(Binding*) ( currentLP->list[addressArray[currentLevel]] );
 	tempptr->bytes=tempptr->bytes+size;
 	if (tempptr->bytes > MaxLabel) MaxLabel=tempptr->bytes; // only needed for graph visualization coloring!
-	tempptr->UnMA->insert(addy);
+	tempptr->UnMA->insert(add);
 
 	//****   what to do if insertion is not successful, memory problems!!!!!!!!!!!!
 	

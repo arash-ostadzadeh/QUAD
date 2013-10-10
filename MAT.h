@@ -123,7 +123,7 @@ typedef struct
 	uint16_t producer;  
 	uint16_t consumer;
 	
-	set<ADDRINT>* UnMA;
+	set<ADDRINT>* UnMA;     // **** a customized set implementation to replace STL set
 	// set UnDV;  not sure if this is the place to keep it, *** check later!
 	
 	uint8_t DCC_file_ptr_idx;	// (0) is reserved for no monitoring flag, (idx-1) points to the corresponding ofstream to dump the DCC flat profile, maximum DCCs that can be monitored is 255

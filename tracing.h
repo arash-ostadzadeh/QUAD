@@ -79,9 +79,9 @@ THE POSSIBILITY OF SUCH DAMAGE.
 void Put_Binding_in_XML_file(string producer,string consumer,uint64_t bytes,uint64_t unma);
 void Update_total_statistics(string producer,string consumer,uint64_t bytes,uint64_t unma,bool p_f,bool c_f);
 int CreateTotalStatFile();
-int IsNewFunc(uint32_t funcID);
+int IsNewFunc(uint16_t funcID);
 void recTrieTraverse(struct trieNode* current,int level);
 int CreateDSGraphFile();
-MAT_ERR_TYPE  RecordBindingInQDUGraph(uint32_t producer, uint32_t consumer, ADDRINT addy, uint8_t size);
+MAT_ERR_TYPE  RecordBindingInQDUGraph(uint16_t producer, uint16_t consumer, ADDRINT add, uint8_t size);
 
 #endif //__TRACING__H__
