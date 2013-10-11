@@ -1,6 +1,6 @@
 /*
 QUAD v2.0
-final revision October 9th, 2013
+final revision October 11th, 2013
 
 This tool is part of QUAD Toolset
 http://sourceforge.net/projects/quadtoolset
@@ -57,7 +57,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
  * This file is part of QUAD.
  *
  *  Author: Arash Ostadzadeh
- *  Lastly revised on 9-10-2013
+ *  Lastly revised on 11-10-2013
 */
 //==============================================================================
 
@@ -98,6 +98,9 @@ void MemPool::Dealloc ( void * ptr, size_t size )   // size not needed for de-al
 
 MAT::MAT ( const char* QDUG_filename="QDUG.dot", const char* Binding_XML_filename="QUAD.xml" )
 {
+
+// *****  to be uncommented later ...
+/*
     MAT::QDUG_filename=QDUG_filename;
     MAT::Binding_XML_filename=Binding_XML_filename;
 
@@ -117,6 +120,7 @@ MAT::MAT ( const char* QDUG_filename="QDUG.dot", const char* Binding_XML_filenam
         exit(1);
     }
 
+*/
     
     // Initialize the xml processing for QDUG file
     // Write the preamble text for the QDUG file
@@ -513,5 +517,13 @@ MAT_ERR_TYPE  MAT::WriteAccess ( uint16_t func, ADDRINT add, uint8_t size )
     }   // end of the trie bucket already exists
 
 return  SUCCESS;    // The write access was successfully recorded in the trie
+}
+
+//==============================================================================
+MAT::~MAT (  )
+{
+    QDUG_file.close( );
+    XML_file.close( );
+    // **** more housekeeping to come later...
 }
 //==============================================================================

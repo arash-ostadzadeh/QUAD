@@ -1,7 +1,7 @@
 /*
 
 QUAD v2.0
-final revision October 9th, 2013
+final revision October 11th, 2013
 
 This tool is part of QUAD Toolset
 http://sourceforge.net/projects/quadtoolset
@@ -58,7 +58,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
  * This file is part of QUAD.
  *
  *  Author: Arash Ostadzadeh
- *  Lastly revised on 9-10-2013
+ *  Lastly revised on 11-10-2013
 */
 //==============================================================================
 
@@ -113,6 +113,8 @@ THE POSSIBILITY OF SUCH DAMAGE.
 /* ===================================================================== */
 #include "MAT.cpp"
 /* ===================================================================== */
+#include "tracing.cpp"
+/* ===================================================================== */
 
 
 
@@ -120,18 +122,20 @@ THE POSSIBILITY OF SUCH DAMAGE.
 /* Global Variables */
 /* ===================================================================== */
 
+   MAT Mat;    // the main object for keeping record of all memory accesses! 
+
    TiXmlDocument xmldoc; // also used in Tracing.cpp
 
    char main_image_name[100];
    
-   map <string,ADDRINT> NametoADD;
-   map <ADDRINT,string> ADDtoName;
+   map <string,uint16_t> NametoADD;
+   map <uint16_t,string> ADDtoName;
 
 
    stack <string> CallStack; // our own virtual Call Stack to trace function call
 
    set<string> SeenFname;
-   ADDRINT GlobalfunctionNo=0x1;
+   uint16_t GlobalfunctionNo=0x1;
 
    UINT64 Total_Ins=0;  // just for counting the total number of executed instructions
    UINT32 Total_M_Ins=0; // total number of instructions but divided by a million
@@ -148,12 +152,12 @@ THE POSSIBILITY OF SUCH DAMAGE.
    {
    UINT64 total_IN_ML;  // total bytes consumed by this function, produced by a function in the monitor list
    UINT64 total_OUT_ML; // total bytes produced by this function, consumed by a function in the monitor list
-   UINT64 total_IN_ML_UMA; // total UMA used by this function, produced by a function in the monitor list
-   UINT64 total_OUT_ML_UMA; // total UMA used by this function, consumed by a function in the monitor list
+   UINT64 total_IN_ML_UnMA; // total UMA used by this function, produced by a function in the monitor list
+   UINT64 total_OUT_ML_UnMA; // total UMA used by this function, consumed by a function in the monitor list
    UINT64 total_IN_ALL; // total bytes consumed by this function, produced by any function in the application
    UINT64 total_OUT_ALL; // total bytes produced by this function, consumed by any function in the application
-   UINT64 total_IN_ALL_UMA; // total UMA used by this function, produced by any function in the application
-   UINT64 total_OUT_ALL_UMA; // total UMA used by this function, consumed by any function in the application
+   UINT64 total_IN_ALL_UnMA; // total UMA used by this function, produced by any function in the application
+   UINT64 total_OUT_ALL_UnMA; // total UMA used by this function, consumed by any function in the application
    vector<string> consumers;
    vector<string> producers;
    } TTL_ML_Data_Pack ;
@@ -182,9 +186,6 @@ KNOB<BOOL> KnobIncludeExternalImages(KNOB_MODE_WRITEONCE, "pintool",
 KNOB<BOOL> KnobVerbose_ON(KNOB_MODE_WRITEONCE, "pintool",
     "verbose","0", "Print information on the console during application execution");
 
-    
-/* ===================================================================== */
-#include "tracing.cpp"
 /* ===================================================================== */
 
 VOID EnterFC(char *name,bool flag) 
@@ -299,12 +300,12 @@ bool Remove_Previous_QUAD_elements()
     }//while Profile_element	
   return 0;
 }
-//============================================================================
 
+//============================================================================
 INT32 Usage()
 {
     cerr <<
-        "\nQUADcore v0.4.3\nThis tool provides quantitative data usage statistics by rigorously tracing and analysing all memory accesses within an application.\n\n";
+        "\nQUADcore v2.0\nThis tool detects the actual data dependencies within an application at the function-level by rigorously tracing and analysing all memory accesses.\n\n";
 
     
     cerr << KNOB_BASE::StringKnobSummary();
@@ -316,8 +317,6 @@ INT32 Usage()
 
 
 /* ===================================================================== */
-
-
 VOID  Return(VOID *ip)
 {
        string fn_name = RTN_FindNameByAddress((ADDRINT)ip);
@@ -331,7 +330,6 @@ VOID  Return(VOID *ip)
 }
 
 /* ===================================================================== */
-
 VOID UpdateCurrentFunctionName(RTN rtn,VOID *v)
 {
 	  
@@ -361,8 +359,8 @@ VOID UpdateCurrentFunctionName(RTN rtn,VOID *v)
 	RTN_Close(rtn);
 	
 }
-/* ===================================================================== */
 
+/* ===================================================================== */
 VOID Fini(INT32 code, VOID *v)
 {
     cerr << "\nFinished executing the instrumented application..." << endl;
@@ -374,8 +372,7 @@ VOID Fini(INT32 code, VOID *v)
     cerr << "done!" << endl;
 }
 
-
-
+/* ===================================================================== */
 static VOID RecordMem(VOID * ip, CHAR r, VOID * addr, INT32 size, BOOL isPrefetch)
 {
 
@@ -389,10 +386,20 @@ static VOID RecordMem(VOID * ip, CHAR r, VOID * addr, INT32 size, BOOL isPrefetc
             		NametoADD[temp]=GlobalfunctionNo;   // create the string -> Number binding
             		ADDtoName[GlobalfunctionNo]=temp;   // create the Number -> String binding
 		} 
-           for(int i=0;i<size;i++)
-	    {
-		RecordMemoryAccess((ADDRINT)addr,NametoADD[temp],r=='W');
-		addr=((char *)addr)+1;  // cast not needed anyway!
+
+//           for(int i=0;i<size;i++)
+//	    {
+//		RecordMemoryAccess((ADDRINT)addr,NametoADD[temp],r=='W');
+//		addr=((char *)addr)+1;  // cast not needed anyway!
+
+            if (r=='W')     // record memory write access
+                    if ( Mat.WriteAccess( NametoADD[temp], (ADDRINT)addr, (uint8_t) size ) != SUCCESS )
+                            	cerr<<"\nFailed to record a memory write access in the MAT module! \n";
+
+            else            // record memory read access
+                    if ( Mat.ReadAccess( NametoADD[temp], (ADDRINT)addr, (uint8_t) size ) != SUCCESS )
+                            	cerr<<"\nFailed to record a memory read access in the MAT module! \n";
+                    
 	   
 	    if (Verbose_ON && Total_Ins>999999)
 	    {
@@ -403,12 +410,13 @@ static VOID RecordMem(VOID * ip, CHAR r, VOID * addr, INT32 size, BOOL isPrefetc
 	    }
 	    
 	    //<<"   "<<temp<<"  "<<( (r!='w')? "READ access  " : "WRITE access  ")<<"Memory Location# "<<addr;
-        }
+//        }
+       
        }// end of not a prefetch
 
 }
 
-
+/* ===================================================================== */
 static VOID RecordMemSP(VOID * ip, VOID * ESP, CHAR r, VOID * addr, INT32 size, BOOL isPrefetch)
 {
 
@@ -424,10 +432,19 @@ static VOID RecordMemSP(VOID * ip, VOID * ESP, CHAR r, VOID * addr, INT32 size, 
             		NametoADD[temp]=GlobalfunctionNo;   // create the string -> Number binding
             		ADDtoName[GlobalfunctionNo]=temp;   // create the Number -> String binding
 		} 
-           for(int i=0;i<size;i++)
-	    {
-		RecordMemoryAccess((ADDRINT)addr,NametoADD[temp],r=='W');
-		addr=((char *)addr)+1;  // cast not needed anyway!
+//           for(int i=0;i<size;i++)
+//	    {
+//		RecordMemoryAccess((ADDRINT)addr,NametoADD[temp],r=='W');
+//		addr=((char *)addr)+1;  // cast not needed anyway!
+
+            if (r=='W')     // record memory write access
+                    if ( Mat.WriteAccess( NametoADD[temp], (ADDRINT)addr, (uint8_t) size ) != SUCCESS )
+                            	cerr<<"\nFailed to record a memory write access in the MAT module! \n";
+
+            else            // record memory read access
+                    if ( Mat.ReadAccess( NametoADD[temp], (ADDRINT)addr, (uint8_t) size ) != SUCCESS )
+                            	cerr<<"\nFailed to record a memory read access in the MAT module! \n";
+
 
 	    if (Verbose_ON && Total_Ins>999999)
 	    {
@@ -438,17 +455,20 @@ static VOID RecordMemSP(VOID * ip, VOID * ESP, CHAR r, VOID * addr, INT32 size, 
 	    }
 	    
 	    //<<"   "<<temp<<"  "<<( (r!='w')? "READ access  " : "WRITE access  ")<<"Memory Location# "<<addr;
-        }
+//        }
+
        }// end of not a prefetch
 
 }
 
+/* ===================================================================== */
 // increment routine for the total instruction counter
 VOID IncreaseTotalInstCounter()
 {
 	Total_Ins++;
 }
 
+/* ===================================================================== */
 // Is called for every instruction and instruments reads and writes and the Ret instruction
 VOID Instruction(INS ins, VOID *v)
 {
@@ -545,7 +565,6 @@ VOID Instruction(INS ins, VOID *v)
 }
 
 /* ===================================================================== */
-
 const char * StripPath(const char * path)
 {
     const char * file = strrchr(path,DELIMITER_CHAR);
@@ -554,8 +573,11 @@ const char * StripPath(const char * path)
     else
         return path;
 }
-/* ===================================================================== */
 
+
+
+/* ===================================================================== */
+/* ===================================================================== */
 int  main(int argc, char *argv[])
 {
     cerr << endl << "Initializing QUAD framework..." << endl;
@@ -671,12 +693,12 @@ int  main(int argc, char *argv[])
 		    
 		    DPP->total_IN_ML=0;
 		    DPP->total_OUT_ML=0;
-		    DPP->total_IN_ML_UMA=0;
-		    DPP->total_OUT_ML_UMA=0;
+		    DPP->total_IN_ML_UnMA=0;
+		    DPP->total_OUT_ML_UnMA=0;
 		    DPP->total_IN_ALL=0;
 		    DPP->total_OUT_ALL=0;
-		    DPP->total_IN_ALL_UMA=0;
-		    DPP->total_OUT_ALL_UMA=0;
+		    DPP->total_IN_ALL_UnMA=0;
+		    DPP->total_OUT_ALL_UnMA=0;
 		    
 		    ML_OUTPUT[item]=DPP;
 	    
@@ -698,3 +720,4 @@ int  main(int argc, char *argv[])
     
     return 0;
 }
+/* ===================================================================== */

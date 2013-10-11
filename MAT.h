@@ -1,6 +1,6 @@
 /*
 QUAD v2.0
-final revision July 10th, 2013
+final revision October 11th, 2013
 
 This tool is part of QUAD Toolset
 http://sourceforge.net/projects/quadtoolset
@@ -57,7 +57,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
  * This file is part of QUAD.
  *
  *  Author: Arash Ostadzadeh
- *  Lastly revised on 12-06-2013
+ *  Lastly revised on 11-10-2013
 */
 //==============================================================================
 
@@ -126,7 +126,7 @@ typedef struct
 	set<ADDRINT>* UnMA;     // **** a customized set implementation to replace STL set
 	// set UnDV;  not sure if this is the place to keep it, *** check later!
 	
-	uint8_t DCC_file_ptr_idx;	// (0) is reserved for no monitoring flag, (idx-1) points to the corresponding ofstream to dump the DCC flat profile, maximum DCCs that can be monitored is 255
+	// uint8_t DCC_file_ptr_idx;	// (0) is reserved for no monitoring flag, (idx-1) points to the corresponding ofstream to dump the DCC flat profile, maximum DCCs that can be monitored is 255
 } Binding;
 
 
@@ -165,7 +165,6 @@ class MemPool
 }
 
 
-
 class MAT
 {
     public:
@@ -176,7 +175,7 @@ class MAT
 		
         MAT_ERR_TYPE  ReadAccess ( uint16_t func, ADDRINT add, uint8_t size ); // Record a memroy read access
         MAT_ERR_TYPE  WriteAccess ( uint16_t func, ADDRINT add, uint8_t size ); // Record a memroy write access
-        
+        ~MAT( );
     
     private:
         trieNode* root;   // The entry point for the trie tracing data structure
