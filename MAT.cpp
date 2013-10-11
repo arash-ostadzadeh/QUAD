@@ -75,6 +75,7 @@ MemPool::MemPool ( size_t ReservedSize )
          CurrentlyUsed=0;
 }
 
+//==============================================================================
 void * MemPool::Alloc ( size_t size )
 {
     void * temp;
@@ -84,6 +85,7 @@ void * MemPool::Alloc ( size_t size )
     return temp;
 }
 
+//==============================================================================
 void MemPool::Dealloc ( void * ptr, size_t size )   // size not needed for de-allocation, just to update the currently used space in the MemPool
 {
     CurrentlyUsed-=size;
@@ -139,6 +141,7 @@ MAT::MAT ( const char* QDUG_filename="QDUG.dot", const char* Binding_XML_filenam
     // if (MAT::DCC_flat_profile_flag) { }
 }
 
+//==============================================================================
 MAT_ERR_TYPE  MAT::Add_DCC_Binding ( uint16_t producer, uint16_t consumer )
 {
     DCC_binding temp;
@@ -180,11 +183,13 @@ MAT_ERR_TYPE  MAT::Add_DCC_Binding ( uint16_t producer, uint16_t consumer )
     return SUCCESS;
 }
 
+//==============================================================================
 vector<DCC_binding>::size_type  MAT::DCC_Binding_Size ( )
 {
     return Binding_list.size();
 }
 
+//==============================================================================
 MAT_ERR_TYPE  MAT::ReadAccess ( uint16_t func, ADDRINT add, uint8_t size )
 {
 
@@ -217,38 +222,32 @@ MAT_ERR_TYPE  MAT::ReadAccess ( uint16_t func, ADDRINT add, uint8_t size )
         addressArray[15]=ASP->h15;
     }
 
+    // **** performance gain: try to write the following loop in the straightforward manner and as soon as reaching a null path in trie conclude for unknown producer!
+    // **** extra note: the same strategy may be beneficial in other functions, "Check_Prev_7_Addresses" and "Nullify_Old_Producer"
     while( (currentLevel<TrieDepth-1) && (currentLP=currentLP->list[addressArray[currentLevel++]]) );  // proceed as far as possible in the trie 
 
     if ( currentLP ) 
     {
-      if (currentLP->list[addressArray[currentLevel]]  )   // there is a bucket for this address, inspect the size of the data written previously
+      trieBucket* tempptr=  (trieBucket*) (currentLP->list[addressArray[currentLevel]]) ;
+
+      if ( tempptr )   // there is a bucket for this address
       {
-        uint8_t  cur_data_sz= ( (trieBucket*) (currentLP->list[addressArray[currentLevel]]) )->data_size;   // make a copy of the size of the current data object
-        size=size - cur_data_sz;     // size may go negative
-        
-        if ( size<0 )   // The nullification does not hold for the whole size of the data object, issue a new (virtual) write access for the intact part of the data object to be added in the trie
-            // *****  be aware of the extra parameters needed to record a write access, such as PTS, PSN, etc.
-            if ( WriteAccess ( ( (trieBucket*) (currentLP->list[addressArray[currentLevel]]) )->last_producer, 
-                                         add+cur_data_sz+size, 
-                                         -size ) != SUCCESS ) return MEM_ALLOC_FAIL;    // Adding the new record failed. inform the caller
-         
-        //  delete the record for the nullified address(es) and release the allocated memory
-        //  **** if trieBucket contains any link to dynamically allocated memory, it should be deallocated first
-        Dealloc ( currentLP->list[addressArray[currentLevel]], sizeof(trieBucket) );
-        currentLP->list[addressArray[currentLevel]]=NULL;
-        
-        return RecordBindingInQDUGraph
-      
+        if (size <= tempptr->data_size ) return RecordBindingInQDUGraph ( tempptr->last_producer, func, add, size );
+
+        // the consumer function is reading data with a size exceeding the recorded data size for the current producer of that specific address.
+        if ( RecordBindingInQDUGraph ( tempptr->last_producer, func, add, tempptr->data_size ) != SUCCESS ) return BINDING_RECORD_FAIL;
+        return MAT::ReadAccess ( func, add+tempptr->data_size, size - tempptr->data_size );      // issue another virtual read access for the uncovered portion (this is for memory accesses with sizes more that what is currently recorded at that particular address)
       }
     }
     
     // if you are here, then the "func" is trying to read from a memory which was not previously written to by any user defined function in the application (UNKOWN PRODUCER / CONSTANT DATA)
-    if ( RecordBindingInQDUGraph ( 0, func, add, 1 ) != SUCCESS ) return MEM_ALLOC_FAIL;     // function ID# 0 is reserved for UNKOWN PRODUCER / CONSTANT DATA, Note that for just the current address we are sure that we are reading a value from unknown producer, thus the size is 1, for other addresses, if any, the check is repeated!
-    if ( size >1 ) return  MAT::ReadAccess ( func, add+1, size-1 );      // repeat the check for accesses with sizes more than 1 byte
+    if ( RecordBindingInQDUGraph ( 0, func, add, 1 ) != SUCCESS ) return BINDING_RECORD_FAIL;     // function ID# 0 is reserved for UNKOWN PRODUCER / CONSTANT DATA, Note that for just the current address we are sure that we are reading a value from unknown producer, thus the size is 1, for other addresses, if any, the check is repeated!
+    if ( size >1 ) return  MAT::ReadAccess ( func, add+1, size-1 );      // repeat the check for memory accesses with sizes more than 1 byte
 
     return SUCCESS;
 }
 
+//==============================================================================
 // Start from the current "add" and nullify the old producers (if any) up to and including the subsequent "size" addresses
 MAT_ERR_TYPE  MAT::Nullify_Old_Producer ( ADDRINT add, int8_t size )
 {
@@ -309,6 +308,7 @@ MAT_ERR_TYPE  MAT::Nullify_Old_Producer ( ADDRINT add, int8_t size )
     else return Nullify_Old_Producer ( add+1, size-1 );     // current address is not written to until now, skip it and check the next address. viola, at least we are done checking for one byte!
 }
 
+//==============================================================================
 // Check and correct, if necessary, the 7 addresses proior to the current "add". "size" indicates the size of the current write access
 MAT_ERR_TYPE  MAT::Check_Prev_7_Addresses ( ADDRINT add, int8_t size )
 {
@@ -391,7 +391,7 @@ MAT_ERR_TYPE  MAT::Check_Prev_7_Addresses ( ADDRINT add, int8_t size )
     return SUCCESS;
 }
 
-
+//==============================================================================
 MAT_ERR_TYPE  MAT::WriteAccess ( uint16_t func, ADDRINT add, uint8_t size )
 {
     uint8_t  currentLevel=0;
@@ -514,3 +514,4 @@ MAT_ERR_TYPE  MAT::WriteAccess ( uint16_t func, ADDRINT add, uint8_t size )
 
 return  SUCCESS;    // The write access was successfully recorded in the trie
 }
+//==============================================================================
