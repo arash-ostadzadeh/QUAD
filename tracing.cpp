@@ -72,7 +72,7 @@ FILE* gfp,*ufa;
 bool First_Rec_in_XML = true;
 TiXmlNode* Put_QUAD_here=NULL;
 
-uint64_t MaxLabel=0;
+UINT64 MaxLabel=0;
 
 struct trieNode *graphRoot=NULL,*uflist=NULL;
 
@@ -80,7 +80,7 @@ struct trieNode *graphRoot=NULL,*uflist=NULL;
 
 
 //==============================================================================
-void Put_Binding_in_XML_file(string producer,string consumer,uint64_t bytes,uint64_t unma)
+void Put_Binding_in_XML_file(string producer,string consumer,UINT64 bytes,UINT64 unma)
 {
   if (First_Rec_in_XML)  // check to make sure <PROFILE> exists and create the <QUAD> element...
   {	  
@@ -105,8 +105,8 @@ void Put_Binding_in_XML_file(string producer,string consumer,uint64_t bytes,uint
   }
 
   char buffer1 [20],buffer2[20];
-  sprintf(buffer1,"%llu", bytes);
-  sprintf(buffer2,"%llu", unma);
+  sprintf(buffer1,"%" PRIu64 "", bytes);
+  sprintf(buffer2,"%" PRIu64 "", unma);
   	  
   TiXmlElement BINDING_tag("BINDING"),PRODUCER_tag("PRODUCER"),CONSUMER_tag("CONSUMER"),DATA_TRANSFER_tag("DATA_TRANSFER"),UnMA_tag("UnMA");
   TiXmlText pro_text(producer),con_text(consumer),data_transfer_text(buffer1),uma_text(buffer2);
@@ -124,7 +124,7 @@ void Put_Binding_in_XML_file(string producer,string consumer,uint64_t bytes,uint
 }
 
 //==============================================================================
-void Update_total_statistics(string producer,string consumer,uint64_t bytes,uint64_t unma,bool p_f,bool c_f)
+void Update_total_statistics(string producer,string consumer,UINT64 bytes,UINT64 unma,bool p_f,bool c_f)
 {
 	if(p_f)
 	{
@@ -255,12 +255,12 @@ int CreateTotalStatFile()
 }	
 
 //==============================================================================
-int IsNewFunc(uint16_t funcID)
+int IsNewFunc(UINT16 funcID)
 {
     int currentLevel=0;
     int i;
     struct trieNode* currentLP;
-    struct AddressSplitter* ASP= (struct AddressSplitter *)&funcID;
+    AddressSplitter* ASP= (AddressSplitter *)&funcID;
     
     unsigned int addressArray[4];
     
@@ -301,7 +301,7 @@ int IsNewFunc(uint16_t funcID)
 void recTrieTraverse(struct trieNode* current,int level)
 {
     int i;
-	if (level==15)
+	if (level==7)
 	{   
 		Binding *temp;
 		bool producer_in_ML=false,consumer_in_ML=false;
@@ -335,15 +335,15 @@ void recTrieTraverse(struct trieNode* current,int level)
 				fprintf(gfp,"\"%08x\" [label=\"%s\"];\n", (unsigned int)temp->consumer , name3.c_str());
                		}
 			color = (int) (  1023 *  log((double)(temp->bytes)) / log((double)MaxLabel)  ); 
-			fprintf(gfp,"\"%08x\" -> \"%08x\"  [label=\"%llu bytes (%llu UnMA)\" color=\"#%02x%02x%02x\"]\n",(unsigned int)temp->producer,(unsigned int)temp->consumer,temp->bytes,(uint64_t) temp->UnMA->size(), max(0,color-768),min(255,512-abs(color-512)), max(0,min(255,512-color)));
+			fprintf(gfp,"\"%08x\" -> \"%08x\"  [label=\" %" PRIu64 " bytes (%" PRIu64 " UnMA)\" color=\"#%02x%02x%02x\"]\n",(unsigned int)temp->producer,(unsigned int)temp->consumer,temp->bytes, (UINT64) ( temp->UnMA->size() ), max(0,color-768),min(255,512-abs(color-512)), max(0,min(255,512-color)));
 			
-			Put_Binding_in_XML_file(name2,name3,temp->bytes,(uint64_t) temp->UnMA->size());
+			Put_Binding_in_XML_file(name2,name3,temp->bytes,(UINT64) temp->UnMA->size());
 			
 			if (Monitor_ON)  // do we need the total statistics file always or not? ... should be modified if we need this in any case... do not forget to make also the relevant modifications in the monitor list input file processing ... this can also be moved up in the previous condition if we need output file only when monitor list is specified!
 			
 			Update_total_statistics(
 						name2,name3,temp->bytes,
-					        (uint64_t) temp->UnMA->size(),
+					        (UINT64) ( temp->UnMA->size() ),
 					        producer_in_ML,consumer_in_ML
 					       );
 		   
@@ -395,13 +395,13 @@ int CreateDSGraphFile()
 }                                               
 
 //==============================================================================
-MAT_ERR_TYPE  RecordBindingInQDUGraph(uint16_t producer, uint16_t consumer, ADDRINT add, uint8_t size)
+MAT_ERR_TYPE  RecordBinding(UINT16 producer, UINT16 consumer, ADDRINT add, UINT8 size)
 {
-    int currentLevel=0;
+    UINT8  currentLevel=0;
     Binding* tempptr;
-    int i;
+    UINT8  i;
     struct trieNode* currentLP;
-    struct AddressSplitter* ASP= (struct AddressSplitter *)&producer;
+    AddressSplitter* ASP= (AddressSplitter *)&producer;
     
     unsigned int addressArray[8];
     
@@ -410,7 +410,7 @@ MAT_ERR_TYPE  RecordBindingInQDUGraph(uint16_t producer, uint16_t consumer, ADDR
     addressArray[2]=ASP->h2;
     addressArray[3]=ASP->h3;
 
-    ASP=(struct AddressSplitter *)&consumer;
+    ASP=(AddressSplitter *)&consumer;
 
     addressArray[4]=ASP->h0;
     addressArray[5]=ASP->h1;
@@ -421,10 +421,9 @@ MAT_ERR_TYPE  RecordBindingInQDUGraph(uint16_t producer, uint16_t consumer, ADDR
     if(!graphRoot)  /* create the first level in graph trie */
 	   {
 		    if(!(graphRoot=(struct trieNode*)malloc(sizeof(struct trieNode)) ) ) 
-				return 1; /* memory allocation failed*/
+				return BINDING_RECORD_FAIL; /* memory allocation failed*/
             else
-				for (i=0;i<16;i++) 
-                              graphRoot->list[i]=NULL;
+		    for (i=0;i<16;i++)     graphRoot->list[i]=NULL;
     }                         
             
     currentLP=graphRoot;                
@@ -453,7 +452,7 @@ MAT_ERR_TYPE  RecordBindingInQDUGraph(uint16_t producer, uint16_t consumer, ADDR
 			tempptr->bytes=0;  /* set number of times to zero */
 			tempptr->producer=producer;
 			tempptr->consumer=consumer;
-                           tempptr->DCC_file_ptr_idx=0;     // the DCC is not monitored for now!! ****
+                           //  tempptr->DCC_file_ptr_idx=0;     // the DCC is not monitored for now!! ****
 			tempptr->UnMA=new set<ADDRINT>;
 			if (!tempptr->UnMA) return BINDING_RECORD_FAIL; /* memory allocation failed*/
     	}	
@@ -462,7 +461,7 @@ MAT_ERR_TYPE  RecordBindingInQDUGraph(uint16_t producer, uint16_t consumer, ADDR
 	tempptr=(Binding*) ( currentLP->list[addressArray[currentLevel]] );
 	tempptr->bytes=tempptr->bytes+size;
 	if (tempptr->bytes > MaxLabel) MaxLabel=tempptr->bytes; // only needed for graph visualization coloring!
-	tempptr->UnMA->insert(add);
+	for ( i=0;i<size;i++) tempptr->UnMA->insert(add+i); // all the memroy addresses corresponding to the read size should be checked to have an accurate UnMA
 
 	//****   what to do if insertion is not successful, memory problems!!!!!!!!!!!!
 	

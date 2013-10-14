@@ -111,9 +111,6 @@ THE POSSIBILITY OF SUCH DAMAGE.
 /* ===================================================================== */
 #include "MAT.cpp"
 /* ===================================================================== */
-#include "tracing.cpp"
-/* ===================================================================== */
-
 
 
 /* ===================================================================== */
@@ -122,18 +119,18 @@ THE POSSIBILITY OF SUCH DAMAGE.
 
    MAT Mat;    // the main object for keeping record of all memory accesses! 
 
-   TiXmlDocument xmldoc; // also used in Tracing.cpp
+   TiXmlDocument xmldoc; // also used in tracing.cpp
 
    char main_image_name[100];
    
-   map <string,uint16_t> NametoADD;
-   map <uint16_t,string> ADDtoName;
+   map <string,UINT16> NametoADD;
+   map <UINT16,string> ADDtoName;
 
 
    stack <string> CallStack; // our own virtual Call Stack to trace function call
 
    set<string> SeenFname;
-   uint16_t GlobalfunctionNo=0x1;
+   UINT16 GlobalfunctionNo=0x1;
 
    UINT64 Total_Ins=0;  // just for counting the total number of executed instructions
    UINT32 Total_M_Ins=0; // total number of instructions but divided by a million
@@ -184,8 +181,14 @@ KNOB<BOOL> KnobIncludeExternalImages(KNOB_MODE_WRITEONCE, "pintool",
 KNOB<BOOL> KnobVerbose_ON(KNOB_MODE_WRITEONCE, "pintool",
     "verbose","0", "Print information on the console during application execution");
 
+
+
+/* ===================================================================== */
+#include "tracing.cpp"
 /* ===================================================================== */
 
+
+/* ===================================================================== */
 VOID EnterFC(char *name,bool flag) 
 {
 
@@ -391,11 +394,13 @@ static VOID RecordMem(VOID * ip, CHAR r, VOID * addr, INT32 size, BOOL isPrefetc
 //		addr=((char *)addr)+1;  // cast not needed anyway!
 
             if (r=='W')     // record memory write access
-                    if ( Mat.WriteAccess( NametoADD[temp], (ADDRINT)addr, (uint8_t) size ) != SUCCESS )
+            {
+                    if ( Mat.WriteAccess( NametoADD[temp], (ADDRINT)addr, (UINT8) size ) != SUCCESS )
                             	cerr<<"\nFailed to record a memory write access in the MAT module! \n";
+            }
 
             else            // record memory read access
-                    if ( Mat.ReadAccess( NametoADD[temp], (ADDRINT)addr, (uint8_t) size ) != SUCCESS )
+                    if ( Mat.ReadAccess( NametoADD[temp], (ADDRINT)addr, (UINT8) size ) != SUCCESS )
                             	cerr<<"\nFailed to record a memory read access in the MAT module! \n";
                     
 	   
@@ -436,11 +441,13 @@ static VOID RecordMemSP(VOID * ip, VOID * ESP, CHAR r, VOID * addr, INT32 size, 
 //		addr=((char *)addr)+1;  // cast not needed anyway!
 
             if (r=='W')     // record memory write access
-                    if ( Mat.WriteAccess( NametoADD[temp], (ADDRINT)addr, (uint8_t) size ) != SUCCESS )
+            {
+                    if ( Mat.WriteAccess( NametoADD[temp], (ADDRINT)addr, (UINT8) size ) != SUCCESS )
                             	cerr<<"\nFailed to record a memory write access in the MAT module! \n";
+            }
 
             else            // record memory read access
-                    if ( Mat.ReadAccess( NametoADD[temp], (ADDRINT)addr, (uint8_t) size ) != SUCCESS )
+                    if ( Mat.ReadAccess( NametoADD[temp], (ADDRINT)addr, (UINT8) size ) != SUCCESS )
                             	cerr<<"\nFailed to record a memory read access in the MAT module! \n";
 
 

@@ -59,22 +59,27 @@ THE POSSIBILITY OF SUCH DAMAGE.
 */
 //==============================================================================
 
-#ifndef MAT_H
-#define MAT_H
+#ifndef __MAT__H__
+#define __MAT__H__
 
 #include <iostream>
 #include <fstream>    
 #include <cstdio>
 #include <cstdlib>
-#include <cstddef>
-#include <cstdint>
 #include <string>
 #include <vector>
+
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 
 #ifndef NULL
 #define NULL 0L
 #endif
+
+
+// To use a generic address type to suit 32- as well as 64-bit platforms "ADDRINT" is defined as "uintptr_t" in terms of <stdint.h>
+
 
 using namespace std;
 
@@ -87,8 +92,6 @@ typedef enum {
          BINDING_RECORD_FAIL,       // a memory read access was unsuccessful to update the (p->c) binding data (memory problem!)
 } MAT_ERR_TYPE;
 
-// A generic address type to suit 32- as well as 64-bit platforms
-typedef uintptr_t ADDRINT;
 
 // Define the "trie" data structure for tracing adresses
 struct trieNode 
@@ -98,8 +101,8 @@ struct trieNode
 
 typedef struct
 {
-	uint16_t last_producer;     // for now each (prodocer) function is assigned a unique id number (0..65535). Can be replaced with a link to a data block that contains info about the function
-	uint8_t data_size;	// for now the only legitimate values are 1,2,4, and 8
+	UINT16 last_producer;     // for now each (prodocer) function is assigned a unique id number (0..65535). Can be replaced with a link to a data block that contains info about the function
+	UINT8 data_size;	// for now the only legitimate values are 1,2,4, and 8
 	// *** other members should be added later, at least PTS and PSN from the cQUAD profiling data
 } trieBucket;
 
@@ -107,24 +110,24 @@ typedef struct
 // Structure for keeping track of pairs of <producer,consumer> for which we want to monitor the DCCs .... *** may be revised later
 typedef struct 
 {
-    uint16_t producer;
-    uint16_t consumer;
+    string producer;
+    string consumer;
 } DCC_binding;
 
 
 // Structure definition to record producer->consumer Binding info 
 typedef struct 
  {
-	uint64_t bytes;  // change to UINT64 ?!
+	UINT64 bytes;
 	
 	// if the producer and consumer are some kind of entry point (directory) to the data records, they may be left out of the actual data fields in the record... *** to be checked later
-	uint16_t producer;  
-	uint16_t consumer;
+	UINT16 producer;  
+	UINT16 consumer;
 	
 	set<ADDRINT>* UnMA;     // **** a customized set implementation to replace STL set
 	// set UnDV;  not sure if this is the place to keep it, *** check later!
 	
-	// uint8_t DCC_file_ptr_idx;	// (0) is reserved for no monitoring flag, (idx-1) points to the corresponding ofstream to dump the DCC flat profile, maximum DCCs that can be monitored is 255
+	// UINT8 DCC_file_ptr_idx;	// (0) is reserved for no monitoring flag, (idx-1) points to the corresponding ofstream to dump the DCC flat profile, maximum DCCs that can be monitored is 255
 } Binding;
 
 
@@ -150,6 +153,7 @@ typedef struct
 } AddressSplitter;
 
 
+/*
 class MemPool
 {
     public:
@@ -160,19 +164,24 @@ class MemPool
      private:
          size_t CurrentPoolSize;
          size_t CurrentlyUsed;
-}
+};
+
+*/
+
+// forward declaration for RecordBinding ****  should be integrated inside MAT after revising the data structure used for implementation!!!
+MAT_ERR_TYPE  RecordBinding(UINT16 producer, UINT16 consumer, ADDRINT add, UINT8 size);
 
 
 class MAT
 {
     public:
-        MAT ( const char* QDUG_filename="QDUG.dot", const char* Binding_XML_filename="QUAD.xml" );
+        MAT ( const char* QDUG_filename, const char* Binding_XML_filename );
         
-	MAT_ERR_TYPE  Add_DCC_Binding ( uint16_t producer, uint16_t consumer );  // Add a new producer->consumer binding to be monitored regarding its Data Communication Channel (DCC)
-	vector<DCC_binding>::size_type  DCC_Binding_Size ( );	// Current number of DCC bindings
+	// MAT_ERR_TYPE  Add_DCC_Binding ( string producer, string consumer );  // Add a new producer->consumer binding to be monitored regarding its Data Communication Channel (DCC)
+	// vector<DCC_binding>::size_type  DCC_Binding_Size ( );	// Current number of DCC bindings
 		
-        MAT_ERR_TYPE  ReadAccess ( uint16_t func, ADDRINT add, uint8_t size ); // Record a memroy read access
-        MAT_ERR_TYPE  WriteAccess ( uint16_t func, ADDRINT add, uint8_t size ); // Record a memroy write access
+        MAT_ERR_TYPE  ReadAccess ( UINT16 func, ADDRINT add, UINT8 size ); // Record a memroy read access
+        MAT_ERR_TYPE  WriteAccess ( UINT16 func, ADDRINT add, UINT8 size ); // Record a memroy write access
         ~MAT( );
     
     private:
@@ -180,9 +189,9 @@ class MAT
         
         // trieNode* graphRoot;    // The entry point for bindings records: producerID->consumerID-> [Binding Record]
         
-        uint8_t TrieDepth;     // The depth of the trie based on the size of memory addresses (32-bit  -> 8 levels, 64-bit -> 16 levels)
+        UINT8 TrieDepth;     // The depth of the trie based on the size of memory addresses (32-bit  -> 8 levels, 64-bit -> 16 levels)
         
-        MemPool mp;     // The main memory pool used for storing all the tracing info
+        //   MemPool mp;     // The main memory pool used for storing all the tracing info
 
         string QDUG_filename;    // The file name of the output QDU graph
         ofstream QDUG_file;
@@ -197,6 +206,7 @@ class MAT
 		
 	MAT_ERR_TYPE  Nullify_Old_Producer ( ADDRINT add, int8_t size );	// Recursively nullify old producers already present in the trie in case the size of the current write is larger than the size of a previous write
 	MAT_ERR_TYPE  Check_Prev_7_Addresses ( ADDRINT add, int8_t size );	// Check and correct, if necessary, the "size" field of the previous 7 addresses, to make sure that the current write access does not land amid an already existing data object
-}
+};
 
-#endif
+#endif //__MAT__H__
+

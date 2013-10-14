@@ -74,12 +74,12 @@ THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 
-void Put_Binding_in_XML_file(string producer,string consumer,uint64_t bytes,uint64_t unma);
-void Update_total_statistics(string producer,string consumer,uint64_t bytes,uint64_t unma,bool p_f,bool c_f);
+void Put_Binding_in_XML_file(string producer,string consumer,UINT64 bytes,UINT64 unma);
+void Update_total_statistics(string producer,string consumer,UINT64 bytes,UINT64 unma,bool p_f,bool c_f);
 int CreateTotalStatFile();
-int IsNewFunc(uint16_t funcID);
+int IsNewFunc(UINT16 funcID);
 void recTrieTraverse(struct trieNode* current,int level);
 int CreateDSGraphFile();
-MAT_ERR_TYPE  RecordBinding(uint16_t producer, uint16_t consumer, ADDRINT add, uint8_t size);
+MAT_ERR_TYPE  RecordBinding(UINT16 producer, UINT16 consumer, ADDRINT add, UINT8 size);
 
 #endif //__TRACING__H__

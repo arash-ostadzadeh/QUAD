@@ -67,6 +67,8 @@ THE POSSIBILITY OF SUCH DAMAGE.
 //  Definitions of the "MemPool" member functions  //
 //////////////////////////////////////////////////////////////////////
 
+/*
+
 MemPool::MemPool ( size_t ReservedSize )
 {
          CurrentPoolSize=0;     // ***  to be revised once an advanced MemPool implementation is carried out
@@ -89,6 +91,8 @@ void MemPool::Dealloc ( void * ptr, size_t size )   // size not needed for de-al
     CurrentlyUsed-=size;
     delete [] ptr;
 }
+
+*/
         
 /////////////////////////////////////////////////////////////////
 //  Definitions of the "MAT" member functions   //
@@ -127,13 +131,15 @@ MAT::MAT ( const char* QDUG_filename="QDUG.dot", const char* Binding_XML_filenam
     TrieDepth=( sizeof(ADDRINT)==4? 8 : 16 );  // 32-bit  addresses -> 8 levels, 64-bit addresses -> 16 levels
     // Create the first level in the trie
 
-    if( !(root=(struct trieNode*) mp.Alloc(sizeof(struct trieNode)) ) ) 
+    // if( !(root=(struct trieNode*) mp.Alloc(sizeof(struct trieNode)) ) ) 
+    if( !(root=(struct trieNode*) malloc(sizeof(struct trieNode)) ) ) 
+        
     {   // memory allocation failed
         cerr<<"\nCannot create the initial directory in MAT. Memory allocation failed... aborting!\n";
         exit(1);
     }
     else    // initialize all the 16 directory links to zero
-        for ( uint8_t i=0; i<16 ; i++ )   
+        for ( UINT8 i=0; i<16 ; i++ )   
                   root->list[i]=NULL;
     
     DCC_flat_profile_flag=false;
@@ -144,7 +150,10 @@ MAT::MAT ( const char* QDUG_filename="QDUG.dot", const char* Binding_XML_filenam
 }
 
 //==============================================================================
-MAT_ERR_TYPE  MAT::Add_DCC_Binding ( uint16_t producer, uint16_t consumer )
+
+/*
+
+MAT_ERR_TYPE  MAT::Add_DCC_Binding ( string producer, string consumer )
 {
     DCC_binding temp;
     ofstream out;
@@ -164,7 +173,9 @@ MAT_ERR_TYPE  MAT::Add_DCC_Binding ( uint16_t producer, uint16_t consumer )
     
     // revise the name of the flat profiles from the (id->name) map
     // ************************************************************
-    out.open( string(producer)+"_"+string(consumer)+".txt" );
+    string temp_name=producer+"_"+consumer+".txt";
+    
+    out.open( temp_name.c_str() );
     if (! out.is_open() ) 
     {
         cerr<<"\nCannot create the DCC flat profile for <"<<producer<<","<<consumer<<">... aborting!\n";
@@ -173,7 +184,7 @@ MAT_ERR_TYPE  MAT::Add_DCC_Binding ( uint16_t producer, uint16_t consumer )
 
     DCC_flat_profiles.push_back(out);
     
-    if ( static_cast<unsigned int>(DCC_flat_profiles.size() ) != staic_cast<unsigned  int>(sz+1) )
+    if ( static_cast<unsigned int>(DCC_flat_profiles.size() ) != static_cast<unsigned  int>(sz+1) )
     {
         cerr<<"\nError in adding <"<<producer<<","<<consumer<<"> pair to the DCC binding list... \n";
         return BINDING_ADD_FAIL;
@@ -191,17 +202,19 @@ vector<DCC_binding>::size_type  MAT::DCC_Binding_Size ( )
     return Binding_list.size();
 }
 
+*/
+
 //==============================================================================
-MAT_ERR_TYPE  MAT::ReadAccess ( uint16_t func, ADDRINT add, uint8_t size )
+MAT_ERR_TYPE  MAT::ReadAccess ( UINT16 func, ADDRINT add, UINT8 size )
 {
 
-    uint8_t  currentLevel=0;
+    UINT8  currentLevel=0;
     struct trieNode* currentLP=root;
-    struct AddressSplitter* ASP= (struct AddressSplitter *) &add;
+    AddressSplitter* ASP= (AddressSplitter *) &add;
     
     // Reserve space for the worst case: 64-bit address needs a 16-level trie
     //  **** Further extension: can sizeof be determined during the compilation? if so use conditional macro instead for optimization, no need for the extra reservation, etc.
-    uint8_t addressArray[16];
+    UINT8 addressArray[16];
 
     addressArray[0]=ASP->h0;
     addressArray[1]=ASP->h1;
@@ -255,13 +268,13 @@ MAT_ERR_TYPE  MAT::Nullify_Old_Producer ( ADDRINT add, int8_t size )
 {
     if ( size<=0 )  return  SUCCESS; // base condition: no more nullification required
     
-    uint8_t  currentLevel=0;
+    UINT8  currentLevel=0;
     struct trieNode* currentLP=root;
-    struct AddressSplitter* ASP= (struct AddressSplitter *) &add;
+    AddressSplitter* ASP= (AddressSplitter *) &add;
     
     // Reserve space for the worst case: 64-bit address needs a 16-level trie
     //  **** Further extension: can sizeof be determined during the compilation? if so use conditional macro instead for optimization, no need for the extra reservation, etc.
-    uint8_t addressArray[16];
+    UINT8 addressArray[16];
 
     addressArray[0]=ASP->h0;
     addressArray[1]=ASP->h1;
@@ -290,7 +303,7 @@ MAT_ERR_TYPE  MAT::Nullify_Old_Producer ( ADDRINT add, int8_t size )
     {
       if (currentLP->list[addressArray[currentLevel]]  )   // there is a bucket for this address, inspect the size of the data written previously
       {
-        uint8_t  cur_data_sz= ( (trieBucket*) (currentLP->list[addressArray[currentLevel]]) )->data_size;   // make a copy of the size of the current data object
+        UINT8  cur_data_sz= ( (trieBucket*) (currentLP->list[addressArray[currentLevel]]) )->data_size;   // make a copy of the size of the current data object
         size=size - cur_data_sz;     // size may go negative
         
         if ( size<0 )   // The nullification does not hold for the whole size of the data object, issue a new (virtual) write access for the intact part of the data object to be added in the trie
@@ -301,28 +314,29 @@ MAT_ERR_TYPE  MAT::Nullify_Old_Producer ( ADDRINT add, int8_t size )
          
         //  delete the record for the nullified address(es) and release the allocated memory
         //  **** if trieBucket contains any link to dynamically allocated memory, it should be deallocated first
-        Dealloc ( currentLP->list[addressArray[currentLevel]], sizeof(trieBucket) );
+        //  mp.Dealloc ( currentLP->list[addressArray[currentLevel]], sizeof(trieBucket) );
+        free ( currentLP->list[addressArray[currentLevel]]  );
         currentLP->list[addressArray[currentLevel]]=NULL;
         
         return Nullify_Old_Producer ( add+cur_data_sz, size );     // proceed to the next entry in the trie for nullification, note that the "size" is already decremented for the whole "cur_data_sz" not just one byte
       }
     }
-    else return Nullify_Old_Producer ( add+1, size-1 );     // current address is not written to until now, skip it and check the next address. viola, at least we are done checking for one byte!
+    return Nullify_Old_Producer ( add+1, size-1 );     // current address is not written to until now, skip it and check the next address. viola, at least we are done checking for one byte!
 }
 
 //==============================================================================
 // Check and correct, if necessary, the 7 addresses proior to the current "add". "size" indicates the size of the current write access
 MAT_ERR_TYPE  MAT::Check_Prev_7_Addresses ( ADDRINT add, int8_t size )
 {
-    ADDRINT ckeck_add=add-7;
-    struct AddressSplitter* ASP= (struct AddressSplitter *) &check_add;
+    ADDRINT check_add=add-7;
+    AddressSplitter* ASP= (AddressSplitter *) &check_add;
 
-    uint8_t  currentLevel;
+    UINT8  currentLevel;
     struct trieNode* currentLP;
 
     // Reserve space for the worst case: 64-bit address needs a 16-level trie
     //  **** Further extension: can sizeof be determined during the compilation? if so use conditional macro instead for optimization, no need for the extra reservation, etc.
-    uint8_t addressArray[16];
+    UINT8 addressArray[16];
 
     while ( check_add < add ) // check, at most, 'til the previous address of the current write access
     {   
@@ -357,7 +371,7 @@ MAT_ERR_TYPE  MAT::Check_Prev_7_Addresses ( ADDRINT add, int8_t size )
         {
           if ( currentLP->list[addressArray[currentLevel]]  )   // there is a bucket for this address, inspect the size of the data written previously
           {
-            uint8_t  check_add_sz= ( (trieBucket*) (currentLP->list[addressArray[currentLevel]]) )->data_size;   // make a copy of the size of the record at check_add
+            UINT8  check_add_sz= ( (trieBucket*) (currentLP->list[addressArray[currentLevel]]) )->data_size;   // make a copy of the size of the record at check_add
         
             if (  (check_add+check_add_sz) == add )  return SUCCESS;  // the record at the check_add strictly precedes the current write access (no overlap)... everything is fine! no more checking is necessary
             
@@ -394,17 +408,17 @@ MAT_ERR_TYPE  MAT::Check_Prev_7_Addresses ( ADDRINT add, int8_t size )
 }
 
 //==============================================================================
-MAT_ERR_TYPE  MAT::WriteAccess ( uint16_t func, ADDRINT add, uint8_t size )
+MAT_ERR_TYPE  MAT::WriteAccess ( UINT16 func, ADDRINT add, UINT8 size )
 {
-    uint8_t  currentLevel=0;
-    uint8_t  i;
+    UINT8  currentLevel=0;
+    UINT8  i;
     trieBucket* BucketAdd;
     struct trieNode* currentLP=root;
-    struct AddressSplitter* ASP= (struct AddressSplitter *) &add;
+    AddressSplitter* ASP= (AddressSplitter *) &add;
     
     // Reserve space for the worst case: 64-bit address needs a 16-level trie
     //  **** Further extension: can sizeof be determined during the compilation? if so use conditional macro instead for optimization, no need for the extra reservation, etc.
-    uint8_t addressArray[16];
+    UINT8 addressArray[16];
 
     addressArray[0]=ASP->h0;
     addressArray[1]=ASP->h1;
@@ -432,7 +446,8 @@ MAT_ERR_TYPE  MAT::WriteAccess ( uint16_t func, ADDRINT add, uint8_t size )
     {
         if(! (currentLP->list[addressArray[currentLevel]]) ) // Create new level on demand
         {
-                if(!(currentLP->list[addressArray[currentLevel]]=(struct trieNode*)mp.Alloc(sizeof(struct trieNode))) ) 
+                // if(!(currentLP->list[addressArray[currentLevel]]=(struct trieNode*)mp.Alloc(sizeof(struct trieNode))) ) 
+                if(!(currentLP->list[addressArray[currentLevel]]=(struct trieNode*)malloc(sizeof(struct trieNode))) ) 
                 {
                     // *** Further extension: maybe a sophisticated routine to release or dump some already allocated blocks in the MemPool class?!
                     cerr<<"\nCannot create the required trie levels in MAT. Memory allocation failed in tracing a memory write access... \n";
@@ -450,13 +465,13 @@ MAT_ERR_TYPE  MAT::WriteAccess ( uint16_t func, ADDRINT add, uint8_t size )
     // Reached the last level of the trie; time to check whether or not this particular address has been visited before
     // CurrentLP points to the last level in the trie
     // CurrentLevel ->7 or 15
+
+    // **** performance improvement: redefine theBucketAdd to hold the address of the last pointer to the bucket instead of the bucket itself, the following statements can be shortened
     
-    BucketAdd= (trieBucket*) (currentLP->list[addressArray[currentLevel]]);	// record the address of the destination bucket for subsequent accesses
-    
-    if( BucketAdd == NULL ) // Create a new bucket to record the last write access details
+    if( currentLP->list[addressArray[currentLevel]] == NULL ) // Create a new bucket to record the last write access details
     {
-        // **** performance improvement: redefine theBucketAdd to hold the address of the last pointer to the bucket instead of the bucket itself, the following statement can be shortened
-        if(!(  currentLP->list[addressArray[currentLevel]] = mp.Alloc(sizeof(trieBucket)) ) )  // *** Pointer casting is not needed anyway
+        // if(!(  currentLP->list[addressArray[currentLevel]] = (struct trieNode*) mp.Alloc(sizeof(trieBucket)) ) )  
+        if(!(  currentLP->list[addressArray[currentLevel]] = (struct trieNode*) malloc(sizeof(trieBucket)) ) )  
         {
                 // **** Further extension: maybe a sophisticated routine to release or dump some already allocated blocks in the MemPool class?!
                 cerr<<"\nCannot create the required trie bucket in MAT to record access profiling info. Memory allocation failed in tracing a memory write access... \n";
@@ -465,6 +480,7 @@ MAT_ERR_TYPE  MAT::WriteAccess ( uint16_t func, ADDRINT add, uint8_t size )
         }
         else     // Record the last write access details
         {
+                BucketAdd=(trieBucket*) (currentLP->list[addressArray[currentLevel]]);	// record the address of the destination bucket for subsequent accesses
                 BucketAdd->last_producer = func;
                 BucketAdd->data_size = size;
                 // *** more to be added later
@@ -483,7 +499,9 @@ MAT_ERR_TYPE  MAT::WriteAccess ( uint16_t func, ADDRINT add, uint8_t size )
     }
     else    // The trie bucket already exists. first do the ckeck for data size incompatibility, rare but could happen 
     {
-        uint8_t old_size= BucketAdd->data_size;   // save the current size of data object
+
+        BucketAdd= (trieBucket*) (currentLP->list[addressArray[currentLevel]]);	// record the address of the destination bucket for subsequent accesses
+        UINT8 old_size= BucketAdd->data_size;   // save the current size of data object
         
         if ( old_size != size )
         {
