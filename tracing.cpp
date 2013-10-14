@@ -2,11 +2,11 @@
 QUAD v2.0
 final revision October 9th, 2013
 
-This tool is part of QUAD Toolset
+This file is part of QUAD Toolset available @:
 http://sourceforge.net/projects/quadtoolset
 
 Copyright © 2008-2013 Arash Ostadzadeh (ostadzadeh@gmail.com)
-http://www.ce.ewi.tudelft.nl/ostadzadeh/
+http://www.linkedin.com/in/ostadzadeh
 
 This file is part of QUAD toolset.
 
@@ -164,7 +164,7 @@ int CreateTotalStatFile()
     if(!out) 
     {
 
-	    cerr<<"\nCan not create the summary report file containing information about the functions specified in the monitor list..."<<endl;
+	    cerr<<"\nCannot create the summary report file containing information about the functions specified in the monitor list..."<<endl;
 
 	    return 1;
 
@@ -214,7 +214,7 @@ int CreateTotalStatFile()
      out_list.open((pIter -> first+"_(p).txt").c_str());
 	 if(!out_list) 
      {
-	    cerr<<"\nCan not create the report file containing the list of communicating functions for kernels ..."<<endl;
+	    cerr<<"\nCannot create the report file containing the list of communicating functions for kernels ..."<<endl;
 	    return 1;
      }
      
@@ -227,7 +227,7 @@ int CreateTotalStatFile()
      out_list.open((pIter -> first+"_(c).txt").c_str());
 	 if(!out_list) 
      {
-	    cerr<<"\nCan not create the report file containing the list of communicating functions for kernels ..."<<endl;
+	    cerr<<"\nCannot create the report file containing the list of communicating functions for kernels ..."<<endl;
 	    return 1;
      }
      
@@ -372,21 +372,21 @@ int CreateDSGraphFile()
                     uflist->list[i]=NULL;
    
 
-   cerr << "\nwriting QDU graph preamble..." << endl;
+   cerr << "\nWriting QDU graph preamble..." << endl;
    /* write prologue */
    fprintf(gfp,"digraph {\ngraph [];\nnode [fontcolor=black, style=filled, fontsize=20];\nedge [fontsize=14, arrowhead=vee, arrowsize=0.5];\n");
 
-   cerr << "writing QDU graph..." << endl; 
+   cerr << "Writing QDU graph..." << endl; 
    recTrieTraverse(graphRoot,0);
 
    /* write epilogue */
 
-   cerr << "writing QDU graph epilogue..." << endl; 
+   cerr << "Writing QDU graph epilogue..." << endl; 
    fprintf(gfp,"}\n");
    
    //printf("max: %u bytes\n",MaxLabel);
    
-   cerr << "writing <QUAD> in the XML file ...\n";
+   cerr << "Writing <QUAD> in the XML file ...\n";
    
    if(!xmldoc.SaveFile()) cerr << "Error occurred in XML file update... \n";
    

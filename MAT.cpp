@@ -2,13 +2,11 @@
 QUAD v2.0
 final revision October 11th, 2013
 
-This tool is part of QUAD Toolset
+This file is part of QUAD Toolset available @:
 http://sourceforge.net/projects/quadtoolset
 
 Copyright © 2008-2013 Arash Ostadzadeh (ostadzadeh@gmail.com)
-http://www.ce.ewi.tudelft.nl/ostadzadeh/
-
-This file is part of QUAD toolset.
+http://www.linkedin.com/in/ostadzadeh
 
 
 QUAD is free software: you can redistribute it and/or modify 
@@ -236,16 +234,16 @@ MAT_ERR_TYPE  MAT::ReadAccess ( uint16_t func, ADDRINT add, uint8_t size )
 
       if ( tempptr )   // there is a bucket for this address
       {
-        if (size <= tempptr->data_size ) return RecordBindingInQDUGraph ( tempptr->last_producer, func, add, size );
+        if (size <= tempptr->data_size ) return RecordBinding ( tempptr->last_producer, func, add, size );
 
         // the consumer function is reading data with a size exceeding the recorded data size for the current producer of that specific address.
-        if ( RecordBindingInQDUGraph ( tempptr->last_producer, func, add, tempptr->data_size ) != SUCCESS ) return BINDING_RECORD_FAIL;
+        if ( RecordBinding ( tempptr->last_producer, func, add, tempptr->data_size ) != SUCCESS ) return BINDING_RECORD_FAIL;
         return MAT::ReadAccess ( func, add+tempptr->data_size, size - tempptr->data_size );      // issue another virtual read access for the uncovered portion (this is for memory accesses with sizes more that what is currently recorded at that particular address)
       }
     }
     
     // if you are here, then the "func" is trying to read from a memory which was not previously written to by any user defined function in the application (UNKOWN PRODUCER / CONSTANT DATA)
-    if ( RecordBindingInQDUGraph ( 0, func, add, 1 ) != SUCCESS ) return BINDING_RECORD_FAIL;     // function ID# 0 is reserved for UNKOWN PRODUCER / CONSTANT DATA, Note that for just the current address we are sure that we are reading a value from unknown producer, thus the size is 1, for other addresses, if any, the check is repeated!
+    if ( RecordBinding ( 0, func, add, 1 ) != SUCCESS ) return BINDING_RECORD_FAIL;     // function ID# 0 is reserved for UNKOWN PRODUCER / CONSTANT DATA, Note that for just the current address we are sure that we are reading a value from unknown producer, thus the size is 1, for other addresses, if any, the check is repeated!
     if ( size >1 ) return  MAT::ReadAccess ( func, add+1, size-1 );      // repeat the check for memory accesses with sizes more than 1 byte
 
     return SUCCESS;
@@ -522,8 +520,8 @@ return  SUCCESS;    // The write access was successfully recorded in the trie
 //==============================================================================
 MAT::~MAT (  )
 {
-    QDUG_file.close( );
-    XML_file.close( );
+  //  QDUG_file.close( );
+  //  XML_file.close( );
     // **** more housekeeping to come later...
 }
 //==============================================================================

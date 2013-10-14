@@ -1,35 +1,36 @@
-QUADcore tool
+QUADcore
 
-This is part of the QUAD Toolset project, developed by Arash Ostadzadeh.
+This tool is part of the QUAD Toolset project, developed by Arash Ostadzadeh.
 
-The tool is open source and provided under the GNU Lesser General Public License (LGPL), specifically for academic (non-commercial) purposes.
+QUAD is open source and provided under the GNU Lesser General Public License (LGPL), particularly for academic (non-commercial) purposes.
 
-QUADcore has been deliberately maintained in a separate directory with the aim to offer simplicity and ease of use for experimental academic purposes, meanwhile, to provide the primary functionality of the QUAD toolset.
+QUADcore has been deliberately maintained separately with the aim to offer simplicity and ease of use for experimental academic purposes, meanwhile, to provide the primary functionality of the QUAD toolset.
 
 To use the complete QUAD toolset refer to the 'QUAD' project on sourceforge.
 
-QUAD Toolset
+QUAD Toolset is available @:
 http://sourceforge.net/projects/quadtoolset
 
 Copyright © 2008-2013 Arash Ostadzadeh 
-http://www.ce.ewi.tudelft.nl/ostadzadeh/
+http://www.linkedin.com/in/ostadzadeh
+
 
 Description
 ===========
 
-QUAD (Quantitative Usage Analysis of Data) provides some useful dynamic information regarding data usage between any pair of co-operating functions in an application. The data transfer is calculated in the sense of Producer-Consumer binding. QUADcore reports precisely which function is reading data produced by which function. The exact quantities, showing the amount of data transferred (in bytes), as well as the number of unique memory addresses used in the transfer process, are reported. The tool has been developed based on 'Pin'. Pin is a tool kit for dynamic instrumentation of programs. It supports Linux binary executables for Intel (R) Xscale (R), IA-32, Intel64 (64 bit x86), and Itanium (R) processors; Windows executables for IA-32 and Intel64; and MacOS executables for IA-32. Pin does not instrument an executable statically by rewriting it, but rather adds the code dynamically while the executable is running.
+QUAD (Quantitative Usage Analysis of Data) provides useful information regarding the data transfered between any pair of co-operating functions in an application. The data transfer is calculated in the sense of Producer-Consumer binding. QUADcore reports precisely which function is reading data produced by which function. The exact quantities, showing the amount of data transferred (in bytes), as well as the number of unique memory addresses used in the transfer, are reported. The tool has been developed based on 'Pin'. Pin is a toolkit for Dynamic Binary Instrumentation (DBI) of programs. It supports Linux binary executables for Intel (R) Xscale (R), IA-32, Intel64 (64 bit x86), and Itanium (R) processors; Windows executables for IA-32 and Intel64; and MacOS executables for IA-32. Pin does not instrument an executable statically by rewriting it, but rather adds the code dynamically while the executable is running.
 
 
-What it does
-============
+What QUADcore does
+==================
 
-At the moment, QUADcore tool is able to track every single access (read/write) to a memory location. Based on monitoring the memory access behaviour of the application, processed information is provided to the user in the form of easily interpretable data, i.e., XML text and '.dot' files.
+At the moment, the QUADcore tool is able to track every single access (read/write) to a memory location. By monitoring the memory access behaviour of the application, processed information is provided to the user in the form of easily interpretable data, i.e., XML text and '.dot' files.
 
 
 How to use
 ==========
 
-The Pin tool kit should be installed on the target machine as a prerequisite. You can download the appropriate Pin tool kit from the following URL.
+The Pin toolkit should be installed on the target machine as a prerequisite. You can download the appropriate Pin toolkit from the following URL:
 http://www.pintool.org/downloads.html
 
 Using Pin, an application and a tool are invoked as follows.
@@ -92,7 +93,7 @@ Beside the common built-in options for Pin-developed tools, there are some speci
 Output Files
 ============
 
-1. After the application execution, all the producer/consumer bindings information is stored into an XML file named 'dek_arch.xml' in the current directory by default (the previous <QUAD> elements in the XML file that already exists are removed).
+1. After instrumenting the application, all the producer/consumer bindings data is stored in an XML file named 'dek_arch.xml' in the current directory by default (previous <QUAD> elements in the xml file are removed if any).
 
 The elements that are written in the XML file are stored under the root element, <ORGANIZATION>, in the following form:
 

@@ -2,13 +2,11 @@
 QUAD v2.0
 final revision October 11th, 2013
 
-This tool is part of QUAD Toolset
+This file is part of QUAD Toolset available @:
 http://sourceforge.net/projects/quadtoolset
 
 Copyright © 2008-2013 Arash Ostadzadeh (ostadzadeh@gmail.com)
-http://www.ce.ewi.tudelft.nl/ostadzadeh/
-
-This file is part of QUAD toolset.
+http://www.linkedin.com/in/ostadzadeh
 
 
 QUAD is free software: you can redistribute it and/or modify 
