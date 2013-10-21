@@ -27,11 +27,26 @@ What QUADcore does
 At the moment, the QUADcore tool is able to track every single access (read/write) to a memory location. By monitoring the memory access behaviour of the application, processed information is provided to the user in the form of easily interpretable data, i.e., XML text and '.dot' files.
 
 
+How to build the QUADcore tool
+==============================
+
+The Pin toolkit should be installed on the target machine as a prerequisite. You can download the latest appropriate Pin toolkit from the following URL:
+http://www.pintool.org/downloads.html
+
+After installing the Pin toolkit, copy the QUADcore files to a place of your choosing.
+
+To build QUADcore.so (from QUADcore.cpp) use:
+
+make PIN_ROOT=<path to your Pin kit> obj-intel64/YourTool.so
+
+For the IA-32 architecture, use "obj-ia32" instead of "obj-intel64". For changing the directory where the tool will be created, override the OBJDIR variable from the command line:
+
+make PIN_ROOT=<path to Pin kit> OBJDIR=<path to output dir> <path to output dir>/QUADcore.so
+
+
+
 How to use
 ==========
-
-The Pin toolkit should be installed on the target machine as a prerequisite. You can download the appropriate Pin toolkit from the following URL:
-http://www.pintool.org/downloads.html
 
 Using Pin, an application and a tool are invoked as follows.
 
