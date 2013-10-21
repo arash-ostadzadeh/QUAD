@@ -1,6 +1,6 @@
 /*
 QUAD v2.0
-final revision October 9th, 2013
+final revision October 21st, 2013
 
 This file is part of QUAD Toolset available @:
 http://sourceforge.net/projects/quadtoolset
@@ -57,7 +57,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
  * This file is part of QUAD.
  *
  *  Author: Arash Ostadzadeh
- *  Lastly revised on 9-10-2013
+ *  Lastly revised on 21-10-2013
 */
 //==============================================================================
 
@@ -264,10 +264,10 @@ int IsNewFunc(UINT16 funcID)
     
     unsigned int addressArray[4];
     
-    addressArray[0]=ASP->h0;
-    addressArray[1]=ASP->h1;
-    addressArray[2]=ASP->h2;
-    addressArray[3]=ASP->h3;
+    addressArray[0]=ASP->h3;
+    addressArray[1]=ASP->h2;
+    addressArray[2]=ASP->h1;
+    addressArray[3]=ASP->h0;
     
     currentLP=uflist;                
     while(currentLevel<3)  /* proceed to the last level */
@@ -405,17 +405,17 @@ MAT_ERR_TYPE  RecordBinding(UINT16 producer, UINT16 consumer, ADDRINT add, UINT8
     
     unsigned int addressArray[8];
     
-    addressArray[0]=ASP->h0;
-    addressArray[1]=ASP->h1;
-    addressArray[2]=ASP->h2;
-    addressArray[3]=ASP->h3;
+    addressArray[0]=ASP->h3;
+    addressArray[1]=ASP->h2;
+    addressArray[2]=ASP->h1;
+    addressArray[3]=ASP->h0;
 
     ASP=(AddressSplitter *)&consumer;
 
-    addressArray[4]=ASP->h0;
-    addressArray[5]=ASP->h1;
-    addressArray[6]=ASP->h2;
-    addressArray[7]=ASP->h3;
+    addressArray[4]=ASP->h3;
+    addressArray[5]=ASP->h2;
+    addressArray[6]=ASP->h1;
+    addressArray[7]=ASP->h0;
     
 
     if(!graphRoot)  /* create the first level in graph trie */

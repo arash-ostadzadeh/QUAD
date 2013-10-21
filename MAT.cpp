@@ -1,6 +1,6 @@
 /*
 QUAD v2.0
-final revision October 11th, 2013
+final revision October 21st, 2013
 
 This file is part of QUAD Toolset available @:
 http://sourceforge.net/projects/quadtoolset
@@ -55,7 +55,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
  * This file is part of QUAD.
  *
  *  Author: Arash Ostadzadeh
- *  Lastly revised on 11-10-2013
+ *  Lastly revised on 21-10-2013
 */
 //==============================================================================
 
@@ -216,26 +216,36 @@ MAT_ERR_TYPE  MAT::ReadAccess ( UINT16 func, ADDRINT add, UINT8 size )
     //  **** Further extension: can sizeof be determined during the compilation? if so use conditional macro instead for optimization, no need for the extra reservation, etc.
     UINT8 addressArray[16];
 
-    addressArray[0]=ASP->h0;
-    addressArray[1]=ASP->h1;
-    addressArray[2]=ASP->h2;
-    addressArray[3]=ASP->h3;
-    addressArray[4]=ASP->h4;
-    addressArray[5]=ASP->h5;
-    addressArray[6]=ASP->h6;
-    addressArray[7]=ASP->h7;
-    
-    if (TrieDepth==16)  // continue for 64-bit addresses
+    if (TrieDepth==16)  // for 64-bit addresses
     {
-        addressArray[8]=ASP->h8;
-        addressArray[9]=ASP->h9;
-        addressArray[10]=ASP->h10;
-        addressArray[11]=ASP->h11;
-        addressArray[12]=ASP->h12;
-        addressArray[13]=ASP->h13;
-        addressArray[14]=ASP->h14;
-        addressArray[15]=ASP->h15;
+        addressArray[0]=ASP->h15;
+        addressArray[1]=ASP->h14;
+        addressArray[2]=ASP->h13;
+        addressArray[3]=ASP->h12;
+        addressArray[4]=ASP->h11;
+        addressArray[5]=ASP->h10;
+        addressArray[6]=ASP->h9;
+        addressArray[7]=ASP->h8;
+        addressArray[8]=ASP->h7;
+        addressArray[9]=ASP->h6;
+        addressArray[10]=ASP->h5;
+        addressArray[11]=ASP->h4;
+        addressArray[12]=ASP->h3;
+        addressArray[13]=ASP->h2;
+        addressArray[14]=ASP->h1;
+        addressArray[15]=ASP->h0;
     }
+    else    // for 32-bit addresses
+    {
+        addressArray[0]=ASP->h7;
+        addressArray[1]=ASP->h6;
+        addressArray[2]=ASP->h5;
+        addressArray[3]=ASP->h4;
+        addressArray[4]=ASP->h3;
+        addressArray[5]=ASP->h2;
+        addressArray[6]=ASP->h1;
+        addressArray[7]=ASP->h0;
+    }    
 
     // **** performance gain: try to write the following loop in the straightforward manner and as soon as reaching a null path in trie conclude for unknown producer!
     // **** extra note: the same strategy may be beneficial in other functions, "Check_Prev_7_Addresses" and "Nullify_Old_Producer"
@@ -276,26 +286,36 @@ MAT_ERR_TYPE  MAT::Nullify_Old_Producer ( ADDRINT add, int8_t size )
     //  **** Further extension: can sizeof be determined during the compilation? if so use conditional macro instead for optimization, no need for the extra reservation, etc.
     UINT8 addressArray[16];
 
-    addressArray[0]=ASP->h0;
-    addressArray[1]=ASP->h1;
-    addressArray[2]=ASP->h2;
-    addressArray[3]=ASP->h3;
-    addressArray[4]=ASP->h4;
-    addressArray[5]=ASP->h5;
-    addressArray[6]=ASP->h6;
-    addressArray[7]=ASP->h7;
-    
-    if (TrieDepth==16)  // continue for 64-bit addresses
+    if (TrieDepth==16)  // for 64-bit addresses
     {
-        addressArray[8]=ASP->h8;
-        addressArray[9]=ASP->h9;
-        addressArray[10]=ASP->h10;
-        addressArray[11]=ASP->h11;
-        addressArray[12]=ASP->h12;
-        addressArray[13]=ASP->h13;
-        addressArray[14]=ASP->h14;
-        addressArray[15]=ASP->h15;
+        addressArray[0]=ASP->h15;
+        addressArray[1]=ASP->h14;
+        addressArray[2]=ASP->h13;
+        addressArray[3]=ASP->h12;
+        addressArray[4]=ASP->h11;
+        addressArray[5]=ASP->h10;
+        addressArray[6]=ASP->h9;
+        addressArray[7]=ASP->h8;
+        addressArray[8]=ASP->h7;
+        addressArray[9]=ASP->h6;
+        addressArray[10]=ASP->h5;
+        addressArray[11]=ASP->h4;
+        addressArray[12]=ASP->h3;
+        addressArray[13]=ASP->h2;
+        addressArray[14]=ASP->h1;
+        addressArray[15]=ASP->h0;
     }
+    else    // for 32-bit addresses
+    {
+        addressArray[0]=ASP->h7;
+        addressArray[1]=ASP->h6;
+        addressArray[2]=ASP->h5;
+        addressArray[3]=ASP->h4;
+        addressArray[4]=ASP->h3;
+        addressArray[5]=ASP->h2;
+        addressArray[6]=ASP->h1;
+        addressArray[7]=ASP->h0;
+    }    
 
     while( (currentLevel<TrieDepth-1) && (currentLP=currentLP->list[addressArray[currentLevel++]]) );  // proceed as far as possible in the trie 
 
@@ -344,26 +364,36 @@ MAT_ERR_TYPE  MAT::Check_Prev_7_Addresses ( ADDRINT add, int8_t size )
         currentLP=root;
         currentLevel=0;
 
-        addressArray[0]=ASP->h0;
-        addressArray[1]=ASP->h1;
-        addressArray[2]=ASP->h2;
-        addressArray[3]=ASP->h3;
-        addressArray[4]=ASP->h4;
-        addressArray[5]=ASP->h5;
-        addressArray[6]=ASP->h6;
-        addressArray[7]=ASP->h7;
-    
-        if (TrieDepth==16)  // continue for 64-bit addresses
+        if (TrieDepth==16)  // for 64-bit addresses
         {
-            addressArray[8]=ASP->h8;
-            addressArray[9]=ASP->h9;
-            addressArray[10]=ASP->h10;
-            addressArray[11]=ASP->h11;
-            addressArray[12]=ASP->h12;
-            addressArray[13]=ASP->h13;
-            addressArray[14]=ASP->h14;
-            addressArray[15]=ASP->h15;
+            addressArray[0]=ASP->h15;
+            addressArray[1]=ASP->h14;
+            addressArray[2]=ASP->h13;
+            addressArray[3]=ASP->h12;
+            addressArray[4]=ASP->h11;
+            addressArray[5]=ASP->h10;
+            addressArray[6]=ASP->h9;
+            addressArray[7]=ASP->h8;
+            addressArray[8]=ASP->h7;
+            addressArray[9]=ASP->h6;
+            addressArray[10]=ASP->h5;
+            addressArray[11]=ASP->h4;
+            addressArray[12]=ASP->h3;
+            addressArray[13]=ASP->h2;
+            addressArray[14]=ASP->h1;
+            addressArray[15]=ASP->h0;
         }
+        else    // for 32-bit addresses
+        {
+            addressArray[0]=ASP->h7;
+            addressArray[1]=ASP->h6;
+            addressArray[2]=ASP->h5;
+            addressArray[3]=ASP->h4;
+            addressArray[4]=ASP->h3;
+            addressArray[5]=ASP->h2;
+            addressArray[6]=ASP->h1;
+            addressArray[7]=ASP->h0;
+        }    
 
         while( (currentLevel<TrieDepth-1) && (currentLP=currentLP->list[addressArray[currentLevel++]]) );  // proceed as far as possible in the trie 
 
@@ -420,26 +450,36 @@ MAT_ERR_TYPE  MAT::WriteAccess ( UINT16 func, ADDRINT add, UINT8 size )
     //  **** Further extension: can sizeof be determined during the compilation? if so use conditional macro instead for optimization, no need for the extra reservation, etc.
     UINT8 addressArray[16];
 
-    addressArray[0]=ASP->h0;
-    addressArray[1]=ASP->h1;
-    addressArray[2]=ASP->h2;
-    addressArray[3]=ASP->h3;
-    addressArray[4]=ASP->h4;
-    addressArray[5]=ASP->h5;
-    addressArray[6]=ASP->h6;
-    addressArray[7]=ASP->h7;
-    
-    if (TrieDepth==16)  // continue for 64-bit addresses
+    if (TrieDepth==16)  // for 64-bit addresses
     {
-        addressArray[8]=ASP->h8;
-        addressArray[9]=ASP->h9;
-        addressArray[10]=ASP->h10;
-        addressArray[11]=ASP->h11;
-        addressArray[12]=ASP->h12;
-        addressArray[13]=ASP->h13;
-        addressArray[14]=ASP->h14;
-        addressArray[15]=ASP->h15;
+        addressArray[0]=ASP->h15;
+        addressArray[1]=ASP->h14;
+        addressArray[2]=ASP->h13;
+        addressArray[3]=ASP->h12;
+        addressArray[4]=ASP->h11;
+        addressArray[5]=ASP->h10;
+        addressArray[6]=ASP->h9;
+        addressArray[7]=ASP->h8;
+        addressArray[8]=ASP->h7;
+        addressArray[9]=ASP->h6;
+        addressArray[10]=ASP->h5;
+        addressArray[11]=ASP->h4;
+        addressArray[12]=ASP->h3;
+        addressArray[13]=ASP->h2;
+        addressArray[14]=ASP->h1;
+        addressArray[15]=ASP->h0;
     }
+    else    // for 32-bit addresses
+    {
+        addressArray[0]=ASP->h7;
+        addressArray[1]=ASP->h6;
+        addressArray[2]=ASP->h5;
+        addressArray[3]=ASP->h4;
+        addressArray[4]=ASP->h3;
+        addressArray[5]=ASP->h2;
+        addressArray[6]=ASP->h1;
+        addressArray[7]=ASP->h0;
+    }    
 
 	// **** performance improvment: define a new (or reuse BucketAdd as a placeholder for "currentLP->list[addressArray[currentLevel]]"
     while(currentLevel<TrieDepth-1)  // proceed to the last level of the trie 
