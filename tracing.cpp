@@ -453,7 +453,7 @@ MAT_ERR_TYPE  RecordBinding(UINT16 producer, UINT16 consumer, ADDRINT add, UINT8
 			tempptr->producer=producer;
 			tempptr->consumer=consumer;
                            //  tempptr->DCC_file_ptr_idx=0;     // the DCC is not monitored for now!! ****
-			tempptr->UnMA=new set<ADDRINT>;
+			tempptr->UnMA=new unordered_set<ADDRINT>;
 			if (!tempptr->UnMA) return BINDING_RECORD_FAIL; /* memory allocation failed*/
     	}	
     }

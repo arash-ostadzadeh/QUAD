@@ -68,6 +68,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdlib>
 #include <string>
 #include <vector>
+#include <tr1/unordered_set>
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
@@ -82,6 +83,8 @@ THE POSSIBILITY OF SUCH DAMAGE.
 
 
 using namespace std;
+using std::tr1::unordered_set;
+
 
 // Errors encountered using functions related to MAT
 typedef enum {
@@ -124,7 +127,7 @@ typedef struct
 	UINT16 producer;  
 	UINT16 consumer;
 	
-	set<ADDRINT>* UnMA;     // **** a customized set implementation to replace STL set
+	unordered_set<ADDRINT>* UnMA;     // **** a customized set implementation to replace STL set
 	// set UnDV;  not sure if this is the place to keep it, *** check later!
 	
 	// UINT8 DCC_file_ptr_idx;	// (0) is reserved for no monitoring flag, (idx-1) points to the corresponding ofstream to dump the DCC flat profile, maximum DCCs that can be monitored is 255
