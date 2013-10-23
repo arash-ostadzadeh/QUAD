@@ -8,10 +8,10 @@ QUADcore has been deliberately maintained separately with the aim to offer simpl
 
 To use the complete QUAD toolset refer to the 'QUAD' project on sourceforge.
 
-QUAD Toolset is available @:
+QUAD Toolset is available @
 http://sourceforge.net/projects/quadtoolset
 
-Copyright © 2008-2013 Arash Ostadzadeh 
+Copyright Â© 2008-2013 Arash Ostadzadeh 
 http://www.linkedin.com/in/ostadzadeh
 
 
