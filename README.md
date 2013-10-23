@@ -1,4 +1,5 @@
 QUADcore
+========
 
 This tool is part of the QUAD Toolset project, developed by Arash Ostadzadeh.
 
@@ -55,6 +56,7 @@ pin [pin-options] -t [toolname] [tool-options] -- [application] [application-opt
 QUADcore can be invoked as follows.
 
 [Linux]
+
 pin -t [QUADcore-path] QUADcore.so [QUADcore-options] -- [application-name] [application-options]
 
 If the operating system configuration prevents Pin from using the default (parent) injection mode, try this:
@@ -62,6 +64,7 @@ If the operating system configuration prevents Pin from using the default (paren
 pin -injection child -t [QUADcore-path] QUADcore.so [QUADcore-options] -- [application-name] [application-options]
 
 [Windows]
+
 pin -t [QUADcore-path] QUADcore.dll [QUADcore-options] -- [application-name] [application-options]
 
 
