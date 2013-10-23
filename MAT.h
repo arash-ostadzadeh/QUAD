@@ -207,8 +207,9 @@ class MAT
         vector<DCC_binding> Binding_list;  // The list of DCCs currently being monitored
         vector<ofstream> DCC_flat_profiles;
 		
-	MAT_ERR_TYPE  Nullify_Old_Producer ( ADDRINT add, int8_t size );	// Recursively nullify old producers already present in the trie in case the size of the current write is larger than the size of a previous write
-	MAT_ERR_TYPE  Check_Prev_7_Addresses ( ADDRINT add, int8_t size );	// Check and correct, if necessary, the "size" field of the previous 7 addresses, to make sure that the current write access does not land amid an already existing data object
+        MAT_ERR_TYPE  Nullify_Old_Producer ( ADDRINT add, int8_t size );	// Recursively nullify old producers already present in the trie in case the size of the current write is larger than the size of a previous write
+        MAT_ERR_TYPE  Check_Prev_7_Addresses ( ADDRINT add, int8_t size );	// Check and correct, if necessary, the "size" field of the previous 7 addresses, to make sure that the current write access does not land amid an already existing data object
+        UINT8  Seek_Real_Producer ( ADDRINT add, UINT16 & producer );      // Check "add" and return the size of the last production in that particular address and the producer function ID, if any. The second argument is treated as output.
 };
 
 #endif //__MAT__H__

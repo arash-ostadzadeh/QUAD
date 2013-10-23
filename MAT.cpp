@@ -205,6 +205,63 @@ vector<DCC_binding>::size_type  MAT::DCC_Binding_Size ( )
 */
 
 //==============================================================================
+UINT8  MAT::Seek_Real_Producer ( ADDRINT add, UINT16 & producer )
+{
+
+    UINT8  currentLevel=0;
+    struct trieNode* currentLP=root;
+    AddressSplitter* ASP= (AddressSplitter *) &add;
+    
+    // Reserve space for the worst case: 64-bit address needs a 16-level trie
+    //  **** Further extension: can sizeof be determined during the compilation? if so use conditional macro instead for optimization, no need for the extra reservation, etc.
+    UINT8 addressArray[16];
+
+    if (TrieDepth==16)  // for 64-bit addresses
+    {
+        addressArray[0]=ASP->h15;
+        addressArray[1]=ASP->h14;
+        addressArray[2]=ASP->h13;
+        addressArray[3]=ASP->h12;
+        addressArray[4]=ASP->h11;
+        addressArray[5]=ASP->h10;
+        addressArray[6]=ASP->h9;
+        addressArray[7]=ASP->h8;
+        addressArray[8]=ASP->h7;
+        addressArray[9]=ASP->h6;
+        addressArray[10]=ASP->h5;
+        addressArray[11]=ASP->h4;
+        addressArray[12]=ASP->h3;
+        addressArray[13]=ASP->h2;
+        addressArray[14]=ASP->h1;
+        addressArray[15]=ASP->h0;
+    }
+    else    // for 32-bit addresses
+    {
+        addressArray[0]=ASP->h7;
+        addressArray[1]=ASP->h6;
+        addressArray[2]=ASP->h5;
+        addressArray[3]=ASP->h4;
+        addressArray[4]=ASP->h3;
+        addressArray[5]=ASP->h2;
+        addressArray[6]=ASP->h1;
+        addressArray[7]=ASP->h0;
+    }    
+
+    // **** performance gain: try to write the following loop in the straightforward manner and as soon as reaching a null path in trie conclude for unknown producer!
+    // **** extra note: the same strategy may be beneficial in other functions, "Check_Prev_7_Addresses" and "Nullify_Old_Producer"
+    while( (currentLevel<TrieDepth-1) && (currentLP=currentLP->list[addressArray[currentLevel++]]) );  // proceed as far as possible in the trie 
+
+    if ( ! currentLP ) return 0;    // this particular address not been written to previously
+    
+    trieBucket* tempptr=  (trieBucket*) (currentLP->list[addressArray[currentLevel]]) ;
+    if ( ! tempptr )  return 0;    // this particular address not been written to previously
+    
+    //  report the size of data object and the producer ID
+    producer=tempptr->last_producer;
+    return tempptr->data_size;
+}
+
+//==============================================================================
 MAT_ERR_TYPE  MAT::ReadAccess ( UINT16 func, ADDRINT add, UINT8 size )
 {
 
@@ -265,8 +322,36 @@ MAT_ERR_TYPE  MAT::ReadAccess ( UINT16 func, ADDRINT add, UINT8 size )
       }
     }
     
-    // if you are here, then the "func" is trying to read from a memory which was not previously written to by any user defined function in the application (UNKOWN PRODUCER / CONSTANT DATA)
+    //  apparently we are reading from a location  which was not previously written to! however, before drawing any conclusion, we have to check to ensure that the read instruction is not indeed landing in the middle of a data object!
+
+    // some local variables to keep track of the real producer, if any.
+    ADDRINT add_prod=add-1;     // start the probe from the previous address, as soon as detecting a recorded production, no need to check the addresses which come in prior.
+    UINT16 ID_prod;
+    UINT8 size_prod=0;      // was forced by gcc to initialize this!!!!!! though it will never be used uninitialized in line# 335
+    
+    // do the following check for at most 7 addresses before the current "add" or until Seek_Real_Producer return a non-zero value
+    while (  (add_prod+8 > add)  &&  ( ! (size_prod = Seek_Real_Producer ( add_prod, ID_prod ) ) )   )  add_prod--;     // "ID_prod" contains the ID of the producer, if any, after returning
+    
+    if ( size_prod ) // a potential producer has been found, go for further check to see if "add" really falls in the range of the produced data
+    {
+        if ( add_prod + size_prod >= add + size ) // the current read access falls entirely in the range of the data object produced by ID_prod, record the binding
+                                return RecordBinding ( ID_prod, func, add, size );
+                                
+        if ( add_prod + size_prod >= add  ) // the current read access falls partially in the range of the data object produced by ID_prod, record the binding for the first part, and then continue to the next phase to record the binding for the second part as UNKNOWN PRODUCER
+        {
+            if ( RecordBinding ( ID_prod, func, add, add_prod + size_prod - add  ) != SUCCESS ) return BINDING_RECORD_FAIL;
+            
+            // adjust "add" and "size" for subsequent processing in the last phase of the MAT::ReadAccess, see *** important section below
+            size=size - ( add_prod + size_prod - add );
+            add=add_prod + size_prod;
+        }
+    }
+    // last phase of MAT::ReadAccess  (for unknown producer)
+    // if we are here, then the "func" is trying to read from a memory which was not previously written to by any user defined function in the application (UNKOWN PRODUCER / CONSTANT DATA)
     if ( RecordBinding ( 0, func, add, 1 ) != SUCCESS ) return BINDING_RECORD_FAIL;     // function ID# 0 is reserved for UNKOWN PRODUCER / CONSTANT DATA, Note that for just the current address we are sure that we are reading a value from unknown producer, thus the size is 1, for other addresses, if any, the check is repeated!
+    
+    // **** important: (performance degradation) calling "ReadAccess" in the following is unnecessarily slow, there is no need to check again the previous addresses in case of "UNKNOWN PRODUCER" as these were checked before!!!
+    // try to define a new function with the knowledge that most probably subsequent addresses would be intact as well.
     if ( size >1 ) return  MAT::ReadAccess ( func, add+1, size-1 );      // repeat the check for memory accesses with sizes more than 1 byte
 
     return SUCCESS;
