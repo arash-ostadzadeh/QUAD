@@ -43,7 +43,7 @@ For the IA-32 architecture, use "obj-ia32" instead of "obj-intel64". For changin
 
 make PIN_ROOT=<path to Pin kit> OBJDIR=<path to output dir> <path to output dir>/QUADcore.so
 
-
+We have tested QUADcore with Pin 2.13-61206 in Linux for IA32 and intel64. If you are using older versions of Pin, you may need to use the old makefile provided here in order to build QUADcore. Rename "makefile.old" to "makefile" and try to build the tool. For more details and problems related to building tools with Pin, please consult the available information on the Pin website @ http://software.intel.com/en-us/articles/pintool#GettingStarted
 
 How to use
 ==========
@@ -56,6 +56,10 @@ QUADcore can be invoked as follows.
 
 [Linux]
 pin -t [QUADcore-path] QUADcore.so [QUADcore-options] -- [application-name] [application-options]
+
+If the operating system configuration prevents Pin from using the default (parent) injection mode, try this:
+
+pin -injection child -t [QUADcore-path] QUADcore.so [QUADcore-options] -- [application-name] [application-options]
 
 [Windows]
 pin -t [QUADcore-path] QUADcore.dll [QUADcore-options] -- [application-name] [application-options]
