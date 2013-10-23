@@ -38,11 +38,15 @@ After installing the Pin toolkit, copy the QUADcore files to a place of your cho
 
 To build QUADcore.so (from QUADcore.cpp) use:
 
+```
 make PIN_ROOT=[path to your Pin kit] obj-intel64/QUADcore.so
+```
 
 For the IA-32 architecture, use "obj-ia32" instead of "obj-intel64". For changing the directory where the tool will be created, override the OBJDIR variable from the command line:
 
+```
 make PIN_ROOT=[path to Pin kit] OBJDIR=[path to output dir] [path to output dir]/QUADcore.so
+```
 
 We have tested QUADcore with Pin 2.13-61206 in Linux for IA32 and intel64. If you are using older versions of Pin, you may need to use the old makefile provided here in order to build QUADcore. Rename "makefile.old" to "makefile" and try to build the tool. For more details and problems related to building tools with Pin, please consult the available information on the Pin website @ http://software.intel.com/en-us/articles/pintool#GettingStarted
 
@@ -51,22 +55,29 @@ How to use
 
 Using Pin, an application and a tool are invoked as follows.
 
+```
 pin [pin-options] -t [toolname] [tool-options] -- [application] [application-options]
+```
 
 QUADcore can be invoked as follows.
 
-[Linux]
+**Linux**
 
+```
 pin -t [QUADcore-path] QUADcore.so [QUADcore-options] -- [application-name] [application-options]
+```
 
 If the operating system configuration prevents Pin from using the default (parent) injection mode, try this:
 
+```
 pin -injection child -t [QUADcore-path] QUADcore.so [QUADcore-options] -- [application-name] [application-options]
+```
 
-[Windows]
+**Windows**
 
+```
 pin -t [QUADcore-path] QUADcore.dll [QUADcore-options] -- [application-name] [application-options]
-
+```
 
 ----------------------------------
 *Important Note for Windows users*
@@ -119,6 +130,7 @@ Output Files
 
 The elements that are written in the XML file are stored under the root element, <ORGANIZATION>, in the following form:
 
+```xml
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE ORGANIZATION SYSTEM "architecture.dtd">
 <ORGANIZATION>
@@ -148,7 +160,7 @@ The elements that are written in the XML file are stored under the root element,
       .
       .
 </ORGANIZATION>
-
+```
 
 Terms
 -----
