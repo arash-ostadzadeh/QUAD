@@ -18,13 +18,13 @@ http://www.linkedin.com/in/ostadzadeh
 Description
 ===========
 
-QUAD (Quantitative Usage Analysis of Data) provides useful information regarding the data transfered between any pair of co-operating functions in an application. The data transfer is calculated in the sense of Producer-Consumer binding. QUADcore reports precisely which function is reading data produced by which function. The exact quantities, showing the amount of data transferred (in bytes), as well as the number of unique memory addresses used in the transfer, are reported. The tool has been developed based on 'Pin'. Pin is a toolkit for Dynamic Binary Instrumentation (DBI) of programs. It supports Linux binary executables for Intel (R) Xscale (R), IA-32, Intel64 (64 bit x86), and Itanium (R) processors; Windows executables for IA-32 and Intel64; and MacOS executables for IA-32. Pin does not instrument an executable statically by rewriting it, but rather adds the code dynamically while the executable is running.
+QUAD (Quantitative Usage Analysis of Data) provides useful information regarding the data transfered between any pair of co-operating functions in an application. The data transfer is calculated in the sense of Producer-Consumer binding. QUADcore reports precisely which function is reading data produced by which function. The exact quantities, showing the amount of data transferred (in bytes), as well as the number of unique memory addresses used in the transfer, are reported. The tool has been developed based on 'Pin'. Pin is a toolkit for Dynamic Binary Instrumentation (DBI) of programs. It supports Linux binary executables for Intel (R) Xscale (R), IA-32, Intel64 (64 bit x86), and Itanium (R) processors; Windows executables for IA-32 and Intel64; MacOS  executables for IA-32 and Intel64; and Android executables for IA-32. Pin does not instrument an executable statically by rewriting it, but rather adds the code dynamically while the executable is running.
 
 
 What QUADcore does
 ==================
 
-At the moment, the QUADcore tool is able to track every single access (read/write) to a memory location. By monitoring the memory access behaviour of the application, processed information is provided to the user in the form of easily interpretable data, i.e., XML text and '.dot' files.
+At the moment, the QUADcore tool is able to track every single access (read/write) to a memory location. By monitoring the memory access behaviour of the application, processed information is provided to the user in the form of easily interpretable data, i.e. XML text and '.dot' files.
 
 
 How to build the QUADcore tool
@@ -33,7 +33,7 @@ How to build the QUADcore tool
 The Pin toolkit should be installed on the target machine as a prerequisite. You can download the latest appropriate Pin toolkit from the following URL:
 http://www.pintool.org/downloads.html
 
-After installing the Pin toolkit, copy the QUADcore files to a place of your choosing.
+After installing the Pin toolkit, copy the QUADcore files to a place of your choosing. In that location, make a corresponding directory for the object files ("obj-intel64" if you are using a 64-bit platform or "obj-ia32" for a 32-bit one).
 
 To build QUADcore.so (from QUADcore.cpp) use:
 
