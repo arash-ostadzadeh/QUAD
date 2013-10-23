@@ -220,9 +220,7 @@ VOID EnterFC(char *name,bool flag)
 #else
   if (Uncommon_Functions_Filter)
 
-	if( name[0]=='_' || name[0]=='?' || 
-            !strcmp(name,"call_gmon_start") || !strcmp(name,"frame_dummy") 
-          ) return;
+	if( name[0]=='_' || name[0]=='?' || !strcmp(name,".plt") || !strcmp(name,"call_gmon_start") || !strcmp(name,"frame_dummy") ) return;
 #endif
     
 
@@ -261,9 +259,7 @@ VOID EnterFC_EXTERNAL_OK(char *name)
 #else
   if (Uncommon_Functions_Filter)
 
-	if( name[0]=='_' || name[0]=='?' || 
-            !strcmp(name,"call_gmon_start") || !strcmp(name,"frame_dummy") 
-          ) return;
+	if( name[0]=='_' || name[0]=='?' || !strcmp(name,".plt") || !strcmp(name,"call_gmon_start") || !strcmp(name,"frame_dummy") ) return;
 #endif
     
 
