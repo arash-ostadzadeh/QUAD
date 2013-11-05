@@ -156,20 +156,21 @@ typedef struct
 } AddressSplitter;
 
 
-/*
-class MemPool
+class NonDeallocatableMemPool
 {
     public:
-        MemPool ( size_t ReservedSize=0 );
-        void * Alloc ( size_t size );
-        void Dealloc ( void * ptr, size_t size );
+        NonDeallocatableMemPool ( UINT16 InitSize=512, UINT16 IncSize=256 );    // the sizes are in MBs
+        void * Alloc ( UINT8 size );
         
      private:
-         size_t CurrentPoolSize;
-         size_t CurrentlyUsed;
+         UINT64 TotalPoolSize;    // in bytes
+         UINT64 TotalUsedSize;    // in bytes
+         UINT16 NoAllocBlocks;      // Total number of allocated blocks so far
+         UINT32 CurActiveBlockSize;     // The number of bytes for the most recent block allocated
+         UINT32 CurActiveBlockUsedSize;     // how many bytes are already used in the current active block: this is the base for the decision to allocate a new block in the pool
+         void * CurPoolPointer;     // Points to the current free memory block where allocations are made
 };
 
-*/
 
 // forward declaration for RecordBinding ****  should be integrated inside MAT after revising the data structure used for implementation!!!
 MAT_ERR_TYPE  RecordBinding(UINT16 producer, UINT16 consumer, ADDRINT add, UINT8 size);
@@ -194,7 +195,7 @@ class MAT
         
         UINT8 TrieDepth;     // The depth of the trie based on the size of memory addresses (32-bit  -> 8 levels, 64-bit -> 16 levels)
         
-        //   MemPool mp;     // The main memory pool used for storing all the tracing info
+         NonDeallocatableMemPool mp;     // The memory pool used for storing the main tracing trie nodes
 
         string QDUG_filename;    // The file name of the output QDU graph
         ofstream QDUG_file;
