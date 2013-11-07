@@ -366,6 +366,9 @@ VOID Fini(INT32 code, VOID *v)
     if(Monitor_ON)
 	    CreateTotalStatFile();
     
+    // **** this is currently just for reporting on memory pool!
+    Mat.~MAT();     // explicitly call the destructor for the Mat object
+    
     cerr << "done!" << endl;
 }
 

@@ -1,6 +1,6 @@
 /*
 QUAD v2.0
-final revision October 21st, 2013
+final revision November 7th, 2013
 
 This file is part of QUAD Toolset available @:
 http://sourceforge.net/projects/quadtoolset
@@ -55,7 +55,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
  * This file is part of QUAD.
  *
  *  Author: Arash Ostadzadeh
- *  Lastly revised on 21-10-2013
+ *  Lastly revised on 7-11-2013
 */
 //==============================================================================
 
@@ -64,36 +64,88 @@ THE POSSIBILITY OF SUCH DAMAGE.
 #include "MAT.h"
 
 //////////////////////////////////////////////////////////////////////
-//  Definitions of the "MemPool" member functions  //
+//  Definitions of the "NonDeallocatableMemPool" member functions  //
 //////////////////////////////////////////////////////////////////////
 
-/*
-
-MemPool::MemPool ( size_t ReservedSize )
+NonDeallocatableMemPool::NonDeallocatableMemPool ( UINT16 InitSize, UINT16 IncSize )
 {
-         CurrentPoolSize=0;     // ***  to be revised once an advanced MemPool implementation is carried out
-         CurrentlyUsed=0;
+    InitSize_MB=InitSize;
+    while ( ! (CurPoolPointer= (char*) malloc ( TotalPoolSize=InitSize_MB * (UINT64) ( 1024 * 1024 ) ) )  ) 
+    {   
+        InitSize_MB=InitSize_MB>>1;
+        if ( ! InitSize_MB )  // was unable to allocate 1 MB for the pool... I quit!
+        {
+        cerr<<"\nCannot even create an initial memory pool with the size of 1 MB... QUAD quits!\n";
+        exit(1);
+        }
+    }
+    //  adjust the size of incremental blocks
+    IncSize_MB=InitSize_MB>>1;
+    
+    // set other data members
+    TotalUsedSize=0;    
+    TotalFragWasteSize=0;    
+    NoAllocBlocks=1;      // the initial block also counts
+    CurActiveBlockSize=TotalPoolSize;    
+    CurActiveBlockUsedSize=0;
 }
 
 //==============================================================================
-void * MemPool::Alloc ( size_t size )
+void * NonDeallocatableMemPool::Alloc ( UINT8 size )
 {
     void * temp;
-    temp=new char [size];
-    if (temp) CurrentlyUsed+=size;
     
+    if ( size > CurActiveBlockSize - CurActiveBlockUsedSize )   // a new block needs to be allocated
+    {
+      TotalFragWasteSize+=CurActiveBlockSize - CurActiveBlockUsedSize;  // update the total number of wasted bytes in the pool
+      while ( ! (CurPoolPointer= (char*) malloc ( CurActiveBlockSize=IncSize_MB * (UINT64) ( 1024 * 1024 ) ) )  ) 
+      {   
+        IncSize_MB=IncSize_MB>>1;
+        if ( ! IncSize_MB )  // was unable to allocate 1 MB for the pool... I quit!
+        {
+        cerr<<"\nCannot create a memory block with the size of 1 MB to extend the memory pool... QUAD quits!\n";
+        exit(1);
+        }
+      }
+      // a new block is allocated, adjust the necessary data members
+      TotalPoolSize+=CurActiveBlockSize;
+      NoAllocBlocks++;
+      CurActiveBlockUsedSize=0;
+    }
+    
+    // the current block is ready to be used for the allocation
+    temp=CurPoolPointer;    // keep the current pointer position for later reporting to the caller
+    CurActiveBlockUsedSize+=size;   // adjust the already used bytes in the current memory block
+    TotalUsedSize+=size;    // adjust the total used bytes in the pool
+    
+    CurPoolPointer+=size;   // adjust the pool pointer
+ 
     return temp;
 }
 
 //==============================================================================
-void MemPool::Dealloc ( void * ptr, size_t size )   // size not needed for de-allocation, just to update the currently used space in the MemPool
+NonDeallocatableMemPool::~NonDeallocatableMemPool( )
 {
-    CurrentlyUsed-=size;
-    delete [] ptr;
+    // make a report with the memory pool statistics
+    ofstream repf;
+    repf.open("MemPool.log");
+
+    if (! repf.is_open() ) 
+    {
+        cerr<<"\nCannot create the log file for the memory pool... \n";
+        return;
+    }
+
+    repf<<"The initial size of the memory pool: "<<InitSize_MB<< " MB\n";
+    repf<<"The size of the last allocated block (excluding the initial block) for the pool: "<<( (NoAllocBlocks==1)? 0 : IncSize_MB)<< " MB\n";
+    repf<<"Total size of the pool: "<<TotalPoolSize<< " Byte\n";
+    repf<<"The size of the total memory used in the pool: "<<TotalUsedSize<< " Byte\n";
+    repf<<"The size of the total memory wasted (fragmented and/or unused) in the pool: "<< TotalFragWasteSize+ (CurActiveBlockSize - CurActiveBlockUsedSize) << " Byte\n";
+    repf<<"Total number of allocated blocks (including the initial block) for the pool: "<<NoAllocBlocks<< "\n";
+    
+    repf.close();
 }
 
-*/
-        
 /////////////////////////////////////////////////////////////////
 //  Definitions of the "MAT" member functions   //
 /////////////////////////////////////////////////////////////////
@@ -131,9 +183,8 @@ MAT::MAT ( const char* QDUG_filename="QDUG.dot", const char* Binding_XML_filenam
     TrieDepth=( sizeof(ADDRINT)==4? 8 : 16 );  // 32-bit  addresses -> 8 levels, 64-bit addresses -> 16 levels
     // Create the first level in the trie
 
-    // if( !(root=(struct trieNode*) mp.Alloc(sizeof(struct trieNode)) ) ) 
-    if( !(root=(struct trieNode*) malloc(sizeof(struct trieNode)) ) ) 
-        
+    if( !(root=(struct trieNode*) mp.Alloc(sizeof(struct trieNode)) ) ) 
+    //if( !(root=(struct trieNode*) malloc(sizeof(struct trieNode)) ) ) 
     {   // memory allocation failed
         cerr<<"\nCannot create the initial directory in MAT. Memory allocation failed... aborting!\n";
         exit(1);
@@ -418,9 +469,11 @@ MAT_ERR_TYPE  MAT::Nullify_Old_Producer ( ADDRINT add, int8_t size )
                                          -size ) != SUCCESS ) return MEM_ALLOC_FAIL;    // Adding the new record failed. inform the caller
          
         //  delete the record for the nullified address(es) and release the allocated memory
+        
         //  **** if trieBucket contains any link to dynamically allocated memory, it should be deallocated first
         //  mp.Dealloc ( currentLP->list[addressArray[currentLevel]], sizeof(trieBucket) );
-        free ( currentLP->list[addressArray[currentLevel]]  );
+        //  free ( currentLP->list[addressArray[currentLevel]]  );
+        
         currentLP->list[addressArray[currentLevel]]=NULL;
         
         return Nullify_Old_Producer ( add+cur_data_sz, size );     // proceed to the next entry in the trie for nullification, note that the "size" is already decremented for the whole "cur_data_sz" not just one byte
@@ -571,8 +624,8 @@ MAT_ERR_TYPE  MAT::WriteAccess ( UINT16 func, ADDRINT add, UINT8 size )
     {
         if(! (currentLP->list[addressArray[currentLevel]]) ) // Create new level on demand
         {
-                // if(!(currentLP->list[addressArray[currentLevel]]=(struct trieNode*)mp.Alloc(sizeof(struct trieNode))) ) 
-                if(!(currentLP->list[addressArray[currentLevel]]=(struct trieNode*)malloc(sizeof(struct trieNode))) ) 
+                if(!(currentLP->list[addressArray[currentLevel]]=(struct trieNode*)mp.Alloc(sizeof(struct trieNode))) ) 
+                // if(!(currentLP->list[addressArray[currentLevel]]=(struct trieNode*)malloc(sizeof(struct trieNode))) ) 
                 {
                     // *** Further extension: maybe a sophisticated routine to release or dump some already allocated blocks in the MemPool class?!
                     cerr<<"\nCannot create the required trie levels in MAT. Memory allocation failed in tracing a memory write access... \n";
@@ -595,8 +648,8 @@ MAT_ERR_TYPE  MAT::WriteAccess ( UINT16 func, ADDRINT add, UINT8 size )
     
     if( currentLP->list[addressArray[currentLevel]] == NULL ) // Create a new bucket to record the last write access details
     {
-        // if(!(  currentLP->list[addressArray[currentLevel]] = (struct trieNode*) mp.Alloc(sizeof(trieBucket)) ) )  
-        if(!(  currentLP->list[addressArray[currentLevel]] = (struct trieNode*) malloc(sizeof(trieBucket)) ) )  
+        if(!(  currentLP->list[addressArray[currentLevel]] = (struct trieNode*) mp.Alloc(sizeof(trieBucket)) ) )  
+        // if(!(  currentLP->list[addressArray[currentLevel]] = (struct trieNode*) malloc(sizeof(trieBucket)) ) )  
         {
                 // **** Further extension: maybe a sophisticated routine to release or dump some already allocated blocks in the MemPool class?!
                 cerr<<"\nCannot create the required trie bucket in MAT to record access profiling info. Memory allocation failed in tracing a memory write access... \n";

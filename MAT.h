@@ -1,6 +1,6 @@
 /*
 QUAD v2.0
-final revision October 11th, 2013
+final revision November 7th, 2013
 
 This file is part of QUAD Toolset available @:
 http://sourceforge.net/projects/quadtoolset
@@ -55,7 +55,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
  * This file is part of QUAD.
  *
  *  Author: Arash Ostadzadeh
- *  Lastly revised on 11-10-2013
+ *  Lastly revised on 7-11-2013
 */
 //==============================================================================
 
@@ -159,16 +159,21 @@ typedef struct
 class NonDeallocatableMemPool
 {
     public:
-        NonDeallocatableMemPool ( UINT16 InitSize=512, UINT16 IncSize=256 );    // the sizes are in MBs
+        NonDeallocatableMemPool ( UINT16 InitSize=256, UINT16 IncSize=128 );    // the sizes are in MBs
+        // void SetIncSize( UINT16 );
         void * Alloc ( UINT8 size );
+        ~NonDeallocatableMemPool( );
         
      private:
+         UINT16 InitSize_MB;    // The initial size of the pool to be allocated in MBs
+         UINT16 IncSize_MB;     // The size of incremental blocks to be appended to the pool in MBs
          UINT64 TotalPoolSize;    // in bytes
          UINT64 TotalUsedSize;    // in bytes
+         UINT32 TotalFragWasteSize;     // in bytes
          UINT16 NoAllocBlocks;      // Total number of allocated blocks so far
-         UINT32 CurActiveBlockSize;     // The number of bytes for the most recent block allocated
-         UINT32 CurActiveBlockUsedSize;     // how many bytes are already used in the current active block: this is the base for the decision to allocate a new block in the pool
-         void * CurPoolPointer;     // Points to the current free memory block where allocations are made
+         UINT64 CurActiveBlockSize;     // The number of bytes for the most recent block allocated
+         UINT64 CurActiveBlockUsedSize;     // how many bytes are already used in the current active block: this is the base for the decision to allocate a new block in the pool
+         char * CurPoolPointer;     // Points to the current free memory block where allocations are made
 };
 
 
