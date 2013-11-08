@@ -91,7 +91,7 @@ NonDeallocatableMemPool::NonDeallocatableMemPool ( UINT16 InitSize, UINT16 IncSi
 }
 
 //==============================================================================
-void * NonDeallocatableMemPool::Alloc ( UINT8 size )
+inline void * NonDeallocatableMemPool::Alloc ( UINT8 size )
 {
     void * temp;
     

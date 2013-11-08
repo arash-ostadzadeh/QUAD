@@ -161,7 +161,7 @@ class NonDeallocatableMemPool
     public:
         NonDeallocatableMemPool ( UINT16 InitSize=256, UINT16 IncSize=128 );    // the sizes are in MBs
         // void SetIncSize( UINT16 );
-        void * Alloc ( UINT8 size );
+        inline void * Alloc ( UINT8 size ) __attribute__((always_inline));
         ~NonDeallocatableMemPool( );
         
      private:
