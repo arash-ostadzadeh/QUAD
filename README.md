@@ -50,6 +50,10 @@ make PIN_ROOT=[path to Pin kit] OBJDIR=[path to output dir] [path to output dir]
 
 We have tested QUADcore with Pin 2.13-61206 in Linux for IA32 and intel64. If you are using older versions of Pin, you may need to use the old makefile provided here in order to build QUADcore. Rename "makefile.old" to "makefile" and try to build the tool. For more details and problems related to building tools with Pin, please consult the available information on the Pin website @ http://software.intel.com/en-us/articles/pintool#GettingStarted
 
+Pin 2.13 latest user guide is accessible @ http://software.intel.com/sites/landingpage/pintool/docs/61206/Pin/html/index.html
+
+Please read it first in case you are not familiar with Pin.
+
 How to use
 ==========
 
@@ -83,7 +87,10 @@ pin -t [QUADcore-path] QUADcore.dll [QUADcore-options] -- [application-name] [ap
 *Important Note for Windows users*
 ----------------------------------
 
-Pin on Windows uses 'dbghelp.dll' by Microsoft to provide symbolic information. This DLL is not distributed with the kit. In order to get support for symbolic information in Pin, you have to download the "Debugging Tools For Windows" package, version 6.8.4.0 from http://www.microsoft.com/whdc/devtools/debugging/default.mspx. Use "Debugging Tools For Windows 32-bit Version" for IA-32 architectures and "Debugging Tools For Windows - Native X64" for Intel(R) 64 architectures. Distribution of the debugging tools is provided in .msi format which must be installed to extract a single file. Copy dbghelp.dll from the package into "ia32\bin" or "intel64\bin" directory of the Pin kit. This directory should already contain pin.exe and pinvm.dll files.
+Pin on Windows uses dbghelp.dll by Microsoft to provide symbolic information. dbghelp.dll version 6.11.1.404 is distributed with the Pin kit 2.13-61206. Please use the provided version, as other versions may not work properly with Pin.
+
+In case you are using older versions of Pin, the mentioned DLL may not be included in the kit. Thus, you have to download the "Debugging Tools For Windows" package from http://www.microsoft.com/whdc/devtools/debugging/default.mspx. Use "Debugging Tools For Windows 32-bit Version" for IA-32 architectures and "Debugging Tools For Windows - Native X64" for Intel(R) 64 architectures. Distribution of the debugging tools is provided in .msi format which must be installed to extract a single file. Copy dbghelp.dll from the package into "ia32\bin" or "intel64\bin" directory of the Pin kit. This directory should already contain pin.exe and pinvm.dll files. For more information, refer to the corresponding user guide document for your Pin version.
+
 
 QUADcore Command line Options
 =============================
