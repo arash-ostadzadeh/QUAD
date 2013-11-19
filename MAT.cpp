@@ -146,6 +146,173 @@ NonDeallocatableMemPool::~NonDeallocatableMemPool( )
     repf.close();
 }
 
+
+
+///////////////////////////////////////////////////
+//  Definitions of the "UnMA" member functions   //
+///////////////////////////////////////////////////
+
+UnMA::UnMA (  )
+{
+
+   // if( !(root=(struct trieNode*) malloc(sizeof(struct trieNode)) ) ) 
+    if( !(root=(struct trieNode*) Mat.mp.Alloc(sizeof(struct trieNode)) ) )
+        
+    {   // memory allocation failed
+        cerr<<"\nCannot create the initial directory in a UnMA object. Memory allocation failed... aborting!\n";
+        exit(1);
+    }
+    else    // initialize all the 16 directory links to zero
+        for ( UINT8 i=0; i<16 ; i++ )   
+                  root->list[i]=NULL;
+    
+    sz=0;   // no address is recorded initially in the object
+}
+
+//==============================================================================
+MAT_ERR_TYPE  UnMA::Add ( ADDRINT add )
+{
+
+    UINT8  currentLevel=0,i;
+    struct trieNode* currentLP=root;
+    AddressSplitter* ASP= (AddressSplitter *) &add;
+    
+    // Reserve space for the worst case: 64-bit address needs a 16-level trie
+    //  **** Further extension: can sizeof be determined during the compilation? if so use conditional macro instead for optimization, no need for the extra reservation, etc.
+    UINT8 addressArray[16];
+
+    if (Mat.TrieDepth==16)  // for 64-bit addresses
+    {
+        addressArray[0]=ASP->h15;
+        addressArray[1]=ASP->h14;
+        addressArray[2]=ASP->h13;
+        addressArray[3]=ASP->h12;
+        addressArray[4]=ASP->h11;
+        addressArray[5]=ASP->h10;
+        addressArray[6]=ASP->h9;
+        addressArray[7]=ASP->h8;
+        addressArray[8]=ASP->h7;
+        addressArray[9]=ASP->h6;
+        addressArray[10]=ASP->h5;
+        addressArray[11]=ASP->h4;
+        addressArray[12]=ASP->h3;
+        addressArray[13]=ASP->h2;
+        addressArray[14]=ASP->h1;
+        addressArray[15]=ASP->h0;
+    }
+    else    // for 32-bit addresses
+    {
+        addressArray[0]=ASP->h7;
+        addressArray[1]=ASP->h6;
+        addressArray[2]=ASP->h5;
+        addressArray[3]=ASP->h4;
+        addressArray[4]=ASP->h3;
+        addressArray[5]=ASP->h2;
+        addressArray[6]=ASP->h1;
+        addressArray[7]=ASP->h0;
+    }    
+
+        // **** performance improvment: define a new (or reuse BucketAdd as a placeholder for "currentLP->list[addressArray[currentLevel]]"
+    while(currentLevel<Mat.TrieDepth-1)  // proceed to the last level of the trie 
+    {
+        if(! (currentLP->list[addressArray[currentLevel]]) ) // Create new level on demand
+        {
+                if(!(currentLP->list[addressArray[currentLevel]]=(struct trieNode*) Mat.mp.Alloc(sizeof(struct trieNode))) ) 
+                {
+                    // *** Further extension: maybe a sophisticated routine to release or dump some already allocated blocks in the MemPool class?!
+                    cerr<<"\nCannot create the required trie levels in a UnMA object. Memory allocation failed in adding a memory address to the list of UnMAs... \n";
+                    return MEM_ALLOC_FAIL;  // Memory allocation failed
+                }
+                else
+                       for (i=0;i<16;i++) 
+                              (currentLP->list[addressArray[currentLevel]])->list[i]=NULL;
+        }
+        
+        currentLP=currentLP->list[addressArray[currentLevel]];
+        currentLevel++;
+    }
+
+    // Reached the last level of the trie; time to check whether or not this particular address has been visited before
+    // CurrentLP points to the last level in the trie
+    // CurrentLevel ->7 or 15
+
+    if( currentLP->list[addressArray[currentLevel]] == NULL ) // it is the first time I am seeing "add"
+    {
+        currentLP->list[addressArray[currentLevel]]= (trieNode*) 0x1;      // write a dummy value other than NULL to indicate that this address has been recorded before
+        sz++;   // another UnMA
+    }
+    
+    return SUCCESS;
+}
+
+//==============================================================================
+bool  UnMA::Exists ( ADDRINT add )  const 
+{
+
+    UINT8  currentLevel=0;
+    struct trieNode* currentLP=root;
+    AddressSplitter* ASP= (AddressSplitter *) &add;
+    
+    // Reserve space for the worst case: 64-bit address needs a 16-level trie
+    //  **** Further extension: can sizeof be determined during the compilation? if so use conditional macro instead for optimization, no need for the extra reservation, etc.
+    UINT8 addressArray[16];
+
+    if (Mat.TrieDepth==16)  // for 64-bit addresses
+    {
+        addressArray[0]=ASP->h15;
+        addressArray[1]=ASP->h14;
+        addressArray[2]=ASP->h13;
+        addressArray[3]=ASP->h12;
+        addressArray[4]=ASP->h11;
+        addressArray[5]=ASP->h10;
+        addressArray[6]=ASP->h9;
+        addressArray[7]=ASP->h8;
+        addressArray[8]=ASP->h7;
+        addressArray[9]=ASP->h6;
+        addressArray[10]=ASP->h5;
+        addressArray[11]=ASP->h4;
+        addressArray[12]=ASP->h3;
+        addressArray[13]=ASP->h2;
+        addressArray[14]=ASP->h1;
+        addressArray[15]=ASP->h0;
+    }
+    else    // for 32-bit addresses
+    {
+        addressArray[0]=ASP->h7;
+        addressArray[1]=ASP->h6;
+        addressArray[2]=ASP->h5;
+        addressArray[3]=ASP->h4;
+        addressArray[4]=ASP->h3;
+        addressArray[5]=ASP->h2;
+        addressArray[6]=ASP->h1;
+        addressArray[7]=ASP->h0;
+    }    
+
+    // **** performance gain: try to write the following loop in the straightforward manner and as soon as reaching a null path in trie conclude for unknown producer!
+    while( (currentLevel<Mat.TrieDepth-1) && (currentLP=currentLP->list[addressArray[currentLevel++]]) );  // proceed as far as possible in the trie 
+
+    if ( currentLP && currentLP->list[addressArray[currentLevel]] ) return true;
+    return false;
+}
+
+//==============================================================================
+
+/*
+
+bool UnMA::ListUnMAs ( ADDRINT * lst, UINT64 size )
+{
+
+}
+//==============================================================================
+UnMA::~UnMA ( )
+{
+
+}
+
+*/
+
+
+
 /////////////////////////////////////////////////////////////////
 //  Definitions of the "MAT" member functions   //
 /////////////////////////////////////////////////////////////////

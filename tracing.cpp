@@ -335,17 +335,17 @@ void recTrieTraverse(struct trieNode* current,int level)
 				fprintf(gfp,"\"%08x\" [label=\"%s\"];\n", (unsigned int)temp->consumer , name3.c_str());
                		}
 			color = (int) (  1023 *  log((double)(temp->bytes)) / log((double)MaxLabel)  ); 
-			fprintf(gfp,"\"%08x\" -> \"%08x\"  [label=\" %" PRIu64 " bytes (%" PRIu64 " UnMA)\" color=\"#%02x%02x%02x\"]\n",(unsigned int)temp->producer,(unsigned int)temp->consumer,temp->bytes, (UINT64) ( temp->UnMA->size() ), max(0,color-768),min(255,512-abs(color-512)), max(0,min(255,512-color)));
-			
-			Put_Binding_in_XML_file(name2,name3,temp->bytes,(UINT64) temp->UnMA->size());
-			
-			if (Monitor_ON)  // do we need the total statistics file always or not? ... should be modified if we need this in any case... do not forget to make also the relevant modifications in the monitor list input file processing ... this can also be moved up in the previous condition if we need output file only when monitor list is specified!
-			
-			Update_total_statistics(
-						name2,name3,temp->bytes,
-					        (UINT64) ( temp->UnMA->size() ),
-					        producer_in_ML,consumer_in_ML
-					       );
+                        fprintf(gfp,"\"%08x\" -> \"%08x\"  [label=\" %" PRIu64 " bytes (%" PRIu64 " UnMA)\" color=\"#%02x%02x%02x\"]\n",(unsigned int)temp->producer,(unsigned int)temp->consumer,temp->bytes, temp->UnMA_lst->Size(), max(0,color-768),min(255,512-abs(color-512)), max(0,min(255,512-color)));
+                        
+                        Put_Binding_in_XML_file(name2,name3,temp->bytes, temp->UnMA_lst->Size());
+                        
+                        if (Monitor_ON)  // do we need the total statistics file always or not? ... should be modified if we need this in any case... do not forget to make also the relevant modifications in the monitor list input file processing ... this can also be moved up in the previous condition if we need output file only when monitor list is specified!
+                        
+                        Update_total_statistics(
+                                                name2,name3,temp->bytes,
+                                                 temp->UnMA_lst->Size(),
+                                                producer_in_ML,consumer_in_ML
+                                               );
 		   
 		   } // end of this item in the last level of the trie has a binding we need to check!   
 		} // end of for which goes thru all the items in the last level of the trie...
@@ -453,17 +453,18 @@ MAT_ERR_TYPE  RecordBinding(UINT16 producer, UINT16 consumer, ADDRINT add, UINT8
 			tempptr->producer=producer;
 			tempptr->consumer=consumer;
                            //  tempptr->DCC_file_ptr_idx=0;     // the DCC is not monitored for now!! ****
-			tempptr->UnMA=new unordered_set<ADDRINT>;
-			if (!tempptr->UnMA) return BINDING_RECORD_FAIL; /* memory allocation failed*/
-    	}	
+                        tempptr->UnMA_lst=new UnMA;
+                        if ( ! tempptr->UnMA_lst ) return BINDING_RECORD_FAIL; /* memory allocation failed*/
+            }        
     }
-	
-	tempptr=(Binding*) ( currentLP->list[addressArray[currentLevel]] );
-	tempptr->bytes=tempptr->bytes+size;
-	if (tempptr->bytes > MaxLabel) MaxLabel=tempptr->bytes; // only needed for graph visualization coloring!
-	for ( i=0;i<size;i++) tempptr->UnMA->insert(add+i); // all the memroy addresses corresponding to the read size should be checked to have an accurate UnMA
+        
+        tempptr=(Binding*) ( currentLP->list[addressArray[currentLevel]] );
+        tempptr->bytes=tempptr->bytes+size;
+        if (tempptr->bytes > MaxLabel) MaxLabel=tempptr->bytes; // only needed for graph visualization coloring!
+        // further improvement: **** change the UnMA implementation to accommodate for a range insertion of addresses
+        for ( i=0;i<size;i++) tempptr->UnMA_lst->Add(add+i); // all the memroy addresses corresponding to the read size should be checked to have an accurate measurement for UnMAs
 
-	//****   what to do if insertion is not successful, memory problems!!!!!!!!!!!!
+        //****   what to do if insertion is not successful, memory problems!!!!!!!!!!!!
 	
     return SUCCESS; /* successful recording */
 }

@@ -83,7 +83,14 @@ THE POSSIBILITY OF SUCH DAMAGE.
 
 
 using namespace std;
-using std::tr1::unordered_set;
+// using std::tr1::unordered_set;
+
+// forward declarations
+class UnMA;
+class MAT;
+
+extern MAT Mat;     // needed in the implementation of UnMA
+
 
 
 // Errors encountered using functions related to MAT
@@ -127,7 +134,11 @@ typedef struct
 	UINT16 producer;  
 	UINT16 consumer;
 	
-	unordered_set<ADDRINT>* UnMA;     // **** a customized set implementation to replace STL set
+	//unordered_set<ADDRINT>* UnMA;     // **** a customized set implementation may replace STL set
+
+        UnMA* UnMA_lst;     //  a customized set implementation to replace STL set for keeping the list of UnMAs for a binding
+
+
 	// set UnDV;  not sure if this is the place to keep it, *** check later!
 	
 	// UINT8 DCC_file_ptr_idx;	// (0) is reserved for no monitoring flag, (idx-1) points to the corresponding ofstream to dump the DCC flat profile, maximum DCCs that can be monitored is 255
@@ -159,7 +170,7 @@ typedef struct
 class NonDeallocatableMemPool
 {
     public:
-        NonDeallocatableMemPool ( UINT16 InitSize=256, UINT16 IncSize=128 );    // the sizes are in MBs
+        NonDeallocatableMemPool ( UINT16 InitSize=128, UINT16 IncSize=64 );    // the sizes are in MBs
         // void SetIncSize( UINT16 );
         inline void * Alloc ( UINT8 size ) __attribute__((always_inline));
         ~NonDeallocatableMemPool( );
@@ -181,8 +192,27 @@ class NonDeallocatableMemPool
 MAT_ERR_TYPE  RecordBinding(UINT16 producer, UINT16 consumer, ADDRINT add, UINT8 size);
 
 
+class UnMA
+{
+    public:
+        UnMA ( );
+        MAT_ERR_TYPE  Add ( ADDRINT add );
+        bool  Exists ( ADDRINT add )  const ;
+        UINT64  Size ( ) const  { return sz; }
+        // bool ListUnMAs ( ADDRINT * lst, UINT64 size );   // dump all the UnMAs in an array whose starting address is provided as the first input parameter (lst), size is checked initial to ensure enough memory has been reserved for all the UnMAs, if not the functions returns immediately with a false alert!
+        // ~UnMA ( );      // release the allocated memory in the trie data structre
+        
+    private:
+        UINT64 sz;      // the current number of UnMAs
+        trieNode* root;
+};
+
+
+
 class MAT
 {
+    friend class UnMA;      // I need access TrieDepth to determine the size of memory addresses as well as "mp" pool!
+
     public:
         MAT ( const char* QDUG_filename, const char* Binding_XML_filename );
         
