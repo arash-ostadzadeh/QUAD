@@ -97,43 +97,41 @@ QUADcore Command line Options
 
 Beside the common built-in options for Pin-developed tools, there are some specific command line options available to customize QUADcore. Here is the list:
 
+```
 -filter_uncommon_functions
-        Filter out uncommon function names which are unlikely to be defined by user
-        (beginning with question mark, underscore(s), etc.)
-	
-* this is useful if you do not want to see strange function names (usually library functions) appearing in the report file(s). The default value for this flag is set to 'true', so use '-filter_uncommon_functions 0' if you want to see all the function names in the main image file of the application, or there are some functions that are filtered out mistakenly by QUADcore!
+```
+Filters out uncommon function names which are unlikely to be defined by user (beginning with question mark, underscore(s), etc.). This is useful if you do not want to see strange function names (usually library functions) appearing in the report file(s). The default value for this flag is set to 'true', so use '-filter_uncommon_functions  0' if you want to see all the function names in the main image file of the application, or there are some functions that are filtered out mistakenly by QUADcore!
 
+```
 -include_external_images
-	Trace functions that are contained in external image file(s)
+```
+Traces functions that are contained in external image file(s). This option enables tracing the functions that are contained in external image file(s). By default, only the functions in the main image file are traced and reported. This option together  with '-filter_uncommon_functions' provides more flexibility to include/exclude required/unwanted functions in the report files. This option also has considerable impact on the reported quantitative bindings data and the corresponding producers/consumers.
 
-* This option enables tracing the functions that are contained in external image file(s). By default, only the functions in the main image file are traced and reported. This option together with '-filter_uncommon_functions' provides more flexibility to include/exclude required/unwanted functions in the report files. This option also has considerable impact on the reported quantitative bindings data and the corresponding producers/consumers.
-
+```
 -ignore_stack_access
-        Ignore memory accesses within application's stack region
+```
+Ignores memory accesses within application's stack region. By default, QUADcore tracks all memory accesses to produce binding information. This means, a function extensively using local variable(s) on the stack results in reporting self-bindings in the form of 'x->x' data transfers, which sometimes makes the reports polluted or we get some biased statistics due to a function's formal input parameter that is referenced many times in the stack region after the corresponding call to the function. To avoid this, there is a possibility to specify '-ignore_stack_access' in the command line, which tends to provide clear and straightforward information to the user. Note that all the memory accesses within the stack region are ignored during the instrumentation and no data is recorded regarding these accesses. This option also tends to considerably reduce the instrumentation time.
 
-* By default, QUADcore tracks ALL memory accesses to produce binding information. This means, a function extensively using local variable(s) on the stack results in reporting self-bindings in the form of 'x->x' data transfers, which sometimes makes the reports polluted or we get some biased statistics due to a function's formal input parameter that is referenced many times in the stack region after call. To avoid this, there is a possibility to specify '-ignore_stack_access' in the command line, which tends to provide a clear and straightforward information to the user.
+```
+-use_monitor_list  [filename]
+```
+Creates output report files only for certain function(s) in the application and filters out the rest (the functions are listed in a text file whose name follows). This option is helpful if there is a need to have the output report files only for certain function(s) and not all. The names of the function to monitor should be specified in a normal text file, whose name is provided in the following argument.
 
--use_monitor_list [file name]
-        Create output report files only for certain function(s) in the application
-        and filter out the rest (the functions are listed in a text file whose name
-        follows)
+```
+-xmlfile
+```
+Specifies the filename for the output data in the XML format. The main output file is in the XML format and named 'dek_arch.xml' by default. This can be changed using this option.
 
-* This option is helpful if there is a need to have the output report files only for specific function(s) and not all. The function names to monitor should be specified in a normal text file, whose path/name should be provided as the following argument.
-
--xmlfile  
-        Specify file name for output data in XML format
-
-* The main output report file is in XML format and named 'dek_arch.xml' by default. This can be changed by using this option.
-
+```
 -verbose
-	No silence! print the number of instruction currently being executed on the console
-* By default, QUADcore is silent.
+```
+No silence! Prints the number of instructions executed so far. It can be interpreted as a progress meter for the execution of the application. By default, QUADcore is silent.
 
 
 Output Files
 ============
 
-1. After instrumenting the application, all the producer/consumer bindings data is stored in an XML file named 'dek_arch.xml' in the current directory by default (previous <QUAD> elements in the xml file are removed if any).
+* After instrumenting the application, all the producer/consumer bindings data is stored in an XML file named 'dek_arch.xml' in the current directory by default (previous <QUAD> elements in the xml file are removed if any).
 
 The elements that are written in the XML file are stored under the root element, <ORGANIZATION>, in the following form:
 
@@ -169,38 +167,78 @@ The elements that are written in the XML file are stored under the root element,
 </ORGANIZATION>
 ```
 
+* 'QDUGraph.dot' is output for visualization and contains all the binding information which is contained in the main XML file. For further details, refer to 'Output Visualization' section in the following.
+
+* Summary report file ('ML_OV_Summary.txt') is also created containing information about the functions specified in a monitor list, only in case the user has specified the relevant option in the command line. This text file basically provides statistics on total bytes/UnMA for selected functions. There are eight different values that are explained in the following.
+
+```
+IN_ML
+```
+Total number of bytes read by this function that a function in the monitor list is responsible for producing the value(s) of the byte(s)
+
+```
+IN_ML_UnMA
+```
+Total number of unique memory addresses used corresponding to 'IN_ML'
+
+```
+OUT_ML
+```
+Total number of bytes read by a function in the monitor list that this function is responsible for producing the value(s) of the byte(s)
+
+```
+OUT_ML_UnMA
+```
+Total number of unique memory addresses used corresponding to 'OUT_ML'
+
+```
+IN_ALL
+```
+Total number of bytes read by this function that a function in the application is responsible for producing the value(s) of the byte(s)
+
+```
+IN_ALL_UnMA
+```
+Total number of unique memory addresses used corresponding to 'IN_ALL'
+
+```
+OUT_ALL
+```
+Total number of bytes read by a function in the application that this function is responsible for producing the value(s) of the byte(s)
+
+```
+OUT_ALL_UnMA
+```
+Total number of unique memory addresses used corresponding to 'OUT_ALL'
+
+
 Terms
 -----
 
-BINDING -> When a function (itself or someone this function is responsible for calling and we are simply not interested to monitor the callee; e.g. system library functions, etc.) writes to a memory location, and later the same memory location is read by another function, we say a binding is established.
+```
+BINDING 
+```
+When a function (itself or someone this function is responsible for calling and we are simply not interested to monitor the callee; e.g. system library functions, etc.) writes to a memory location, and later the same memory location is read by another function, we say a binding is established.
 
-PRODUCER -> The name of the function who is responsible for the most recent write to a memory address.
+```
+PRODUCER
+```
+The name of the function who is responsible for the most recent write to a memory address.
 
-CONSUMER -> The name of the function who is responsible for reading from that memory location.
+```
+CONSUMER
+```
+The name of the function who is responsible for reading from that memory location.
 
-DATA_TRANSFER -> The total amount of data being read in this fashion (note that if the same memory location is read 100 times, it is regarded as 100 bytes binding).
+```
+DATA_TRANSFER
+```
+The total amount of data being read in this fashion (note that if the same memory location is read 100 times, it is regarded as 100 bytes binding).
 
-UnMA -> This value shows the number of unique memory addresses used for this transfer, it could be regarded as the actual size of memory buffer needed for the data transfer.
-
-2. 'QDUGraph.dot' is output for visualization and contains all the binding information which is contained in the main XML file. For further details, refer to 'Output Visualization' section in the following.
-
-3. Summary report file ('ML_OV_Summary.txt') is also created containing information about the functions specified in a monitor list, only in case the user has specified the relevant option in the command line. This text file basically provides statistics on total bytes/UnMA for selected functions. There are eight different values that are explained in the following.
-
-IN_ML -> Total number of bytes read by this function that a function in the monitor list is responsible for producing the value(s) of the byte(s)
-
-IN_ML_UnMA -> Total number of unique memory addresses used corresponding to 'IN_ML'
-
-OUT_ML -> Total number of bytes read by a function in the monitor list that this function is responsible for producing the value(s) of the byte(s)
-
-OUT_ML_UnMA -> Total number of unique memory addresses used corresponding to 'OUT_ML'
-
-IN_ALL -> Total number of bytes read by this function that a function in the application is responsible for producing the value(s) of the byte(s)
-
-IN_ALL_UnMA -> Total number of unique memory addresses used corresponding to 'IN_ALL'
-
-OUT_ALL -> Total number of bytes read by a function in the application that this function is responsible for producing the value(s) of the byte(s)
-
-OUT_ALL_UnMA -> Total number of unique memory addresses used corresponding to 'OUT_ALL'
+```
+UnMA
+```
+This value shows the number of unique memory addresses used for this transfer, it could be regarded as the actual size of memory buffer needed for the data transfer.
 
 
 Output Visualization
