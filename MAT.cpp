@@ -552,10 +552,10 @@ MAT_ERR_TYPE  MAT::ReadAccess ( UINT16 func, ADDRINT add, UINT8 size )
     
     if ( size_prod ) // a potential producer has been found, go for further check to see if "add" really falls in the range of the produced data
     {
-        if ( add_prod + size_prod >= add + size ) // the current read access falls entirely in the range of the data object produced by ID_prod, record the binding
+        if ( ( add_prod + size_prod ) >= ( add + size ) ) // the current read access falls entirely in the range of the data object produced by ID_prod, record the binding
                                 return RecordBinding ( ID_prod, func, add, size );
                                 
-        if ( add_prod + size_prod >= add  ) // the current read access falls partially in the range of the data object produced by ID_prod, record the binding for the first part, and then continue to the next phase to record the binding for the second part as UNKNOWN PRODUCER
+        if ( ( add_prod + size_prod ) > add  ) // the current read access falls partially in the range of the data object produced by ID_prod, record the binding for the first part, and then continue to the next phase to record the binding for the second part as UNKNOWN PRODUCER
         {
             if ( RecordBinding ( ID_prod, func, add, add_prod + size_prod - add  ) != SUCCESS ) return BINDING_RECORD_FAIL;
             
