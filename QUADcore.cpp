@@ -108,6 +108,128 @@ THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 
+/* ===================================================================== 
+The CallPath class is used to track and save the chain of function calls and provide 
+relevant statistics for each individual function as requested by the user
+ ===================================================================== */
+
+class CallPath
+{
+        typedef struct
+        {
+            string func;
+            UINT64 call_num;
+            unordered_set<ADDRINT>* write_UnMA;
+            map <string,unordered_set<ADDRINT>*>* read_UnMA;
+        } CallPathStackElem;    // to keep the summary of memory access statistics for each function call
+
+    public:
+        CallPath( );
+        bool CallPathTrackOn( ) { return CP_TRACK_ON_flag; }
+        void BuildFuncList( string fname );     // put the function names listed in the input text file into the "callcounter" map container
+        void FuncEnter( string func );      // a function is called in the application, check and update the internal data if necessary
+        bool RecordWrite( ADDRINT addr, UINT8 size );   // a write access needs to be recorded
+        bool RecordRead( string producer, ADDRINT addr, UINT8 size );   // a read access needs to be recorded
+
+        void FlushOutput( );
+        
+    private:
+        
+        stack<CallPathStackElem> cp_stack;
+        BOOL CP_TRACK_ON_flag;  // if true means that currently there is a function 
+        map <string,UINT64> callcounter;    // how many times the function has been called so far
+        ofstream cpf;   // the text file to store in the call path data
+        
+};
+
+//====================CallPath function definitions===================================
+CallPath::CallPath( )
+{
+    CP_TRACK_ON_flag=false;
+
+    cpf.open("callpath.txt");
+     if (!cpf)
+     {
+	  cerr<<"\nCannot create the call path summary file (\"callpath.txt\")... Aborting!\n";
+	  exit(1);
+     }
+
+}
+
+void CallPath::BuildFuncList( string fname)
+{
+	ifstream ilistf;
+	ilistf.open(fname.c_str());
+         if (!ilistf)
+	{
+	  cerr<<"\nCannot open the call path list file ("<<ilistf.c_str()<<")... Aborting!\n";
+	  exit(1);
+	}
+
+	string item;
+         do
+         {
+	    ilistf>>item;	// get the next function name in the call path list
+	    if (ilistf.eof()) break;	// oops we are finished!
+	    callcounter[item]=0;        // add the function name to be monitored in the call path, and initialize the number of times called to zero
+         } while(1);	
+	
+	ilistf.close();	    
+}
+
+void CallPath::FuncEnter( string func )
+{
+    CallPathStackElem El;
+    map<string,UINT64>::iterator it=callcounter.find(func);
+
+    El.func=func;
+
+    if ( it==callcounter.end( ) )     // entering a function which we do not want to track in the call path... pause the current data recording if recording is activated
+    {
+        CP_TRACK_ON_flag=false;
+        El.call_num=0;      // 0 is signaling that we are not interested in tracking this function. Anyhow, we have to add the dummy record to the call path stack 
+                                      //  because when the function returns we should be able to update the call path accordingly
+        El.write_UnMA=El.read_UnMA=NULL;    // dummy values, not used anyway
+    }
+    else
+    {           // a function of interest is called, activate a new tracking element
+    
+        CP_TRACK_ON_flag=true;
+        it->second++;   // adjust the number of calling times for the corresponding function
+        El.call_num=it->second;
+        El.write_UnMA= new unordered_set<ADDRINT>;
+        if (!El.write_UnMA)
+        {
+            cerr<<"\nMemory allocation failed in adding a new element to the call path stack... Aborting!\n";
+            exit(1);
+        }
+        
+        El.read_UnMA= new map <string,unordered_set<ADDRINT>*>;
+        if (!El.read_UnMA)
+        {
+            cerr<<"\nMemory allocation failed in adding a new element to the call path stack... Aborting!\n";
+            exit(1);
+        }
+        // report the incident in the call path output file
+        cpf<<El.func<<"("<<El.call_num<<") called"<<endl;
+    }
+    
+    cp_stack.push( El );
+}
+
+            // mymap.at("Saturn") += 272;
+            // mymap.count(x) 0 or 1
+
+bool CallPath::RecordWrite( ADDRINT addr, UINT8 size )
+{
+    UINT8 i;
+    unordered_set<ADDRINT>* ptr= ( cp_stack.top( ) ).write_UnMA;
+    for ( i=0;i<size;i++) ptr->insert( add+i );
+
+}
+
+void CallPath::FlushOutput( ) { cpf.close(); }
+
 /* ===================================================================== */
 #include "MAT.cpp"
 /* ===================================================================== */
@@ -117,7 +239,9 @@ THE POSSIBILITY OF SUCH DAMAGE.
 /* Global Variables */
 /* ===================================================================== */
 
-   MAT Mat;    // the main object for keeping record of all memory accesses! 
+   MAT Mat;    // the main object for keeping record of all memory accesses!
+   
+   CallPath CP;     // will be used in case the "call_path_list" option is requested by the user
 
    TiXmlDocument xmldoc; // also used in tracing.cpp
 
@@ -136,6 +260,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
    UINT32 Total_M_Ins=0; // total number of instructions but divided by a million
    
    BOOL Monitor_ON = FALSE;
+   BOOL CallPath_ON = FALSE;    // by default set the call path monitoring flag to false
    BOOL Include_External_Images=FALSE; // a flag showing our interest to trace functions which are not included in the main image file
 
    BOOL Uncommon_Functions_Filter=TRUE;
@@ -181,6 +306,8 @@ KNOB<BOOL> KnobIncludeExternalImages(KNOB_MODE_WRITEONCE, "pintool",
 KNOB<BOOL> KnobVerbose_ON(KNOB_MODE_WRITEONCE, "pintool",
     "verbose","0", "Print information on the console during application execution");
 
+KNOB<string> KnobCallPath(KNOB_MODE_WRITEONCE, "pintool",
+    "call_path_list","", "Track the chain of function calls and provide statistics summary for requested functions (the functions are listed in a text file whose name follows)");
 
 
 /* ===================================================================== */
@@ -227,6 +354,9 @@ VOID EnterFC(char *name,bool flag)
 	// update the current function name	 
 	string RName(name);
 	CallStack.push(RName);
+    
+         // do we need to track this function in the call path?
+         CP.FuncEnter(RName);
 }
 
 
@@ -266,6 +396,10 @@ VOID EnterFC_EXTERNAL_OK(char *name)
 	// update the current function name	 
 	string RName(name);
 	CallStack.push(RName);
+    
+         // do we need to track this function in the call path?
+         CP.FuncEnter(RName);
+    
 }
 
 
@@ -366,6 +500,7 @@ VOID Fini(INT32 code, VOID *v)
     if(Monitor_ON)
 	    CreateTotalStatFile();
     
+    CP.FlushOutput();   // close the call path summary file
     cerr << "done!" << endl;
 }
 
@@ -391,8 +526,14 @@ static VOID RecordMem(VOID * ip, CHAR r, VOID * addr, INT32 size, BOOL isPrefetc
 
             if (r=='W')     // record memory write access
             {
-                    if ( Mat.WriteAccess( NametoADD[temp], (ADDRINT)addr, (UINT8) size ) != SUCCESS )
+                    if ( Mat.WriteAccess( NametoADD[temp], (ADDRINT) addr, (UINT8) size ) != SUCCESS )
                             	cerr<<"\nFailed to record a memory write access in the MAT module! \n";
+                    
+                    //================================Call Path==================================================================
+                    // check the CP_TRACK_ON_flag status to decide whether or not we need to track access data for individual functions
+                    // Note that for read accesses we cannot update statistics at this point and have to do it when the producer is determined in the "RecordBinding" function
+                    if ( CP.CallPathTrackOn( ) ) 
+                        if ( ! CP.RecordWrite( (ADDRINT) addr, (UINT8) size ) )  cerr<<"\nFailed to record a memory write access in the call path stack! \n";
             }
 
             else            // record memory read access
@@ -440,6 +581,13 @@ static VOID RecordMemSP(VOID * ip, VOID * ESP, CHAR r, VOID * addr, INT32 size, 
             {
                     if ( Mat.WriteAccess( NametoADD[temp], (ADDRINT)addr, (UINT8) size ) != SUCCESS )
                             	cerr<<"\nFailed to record a memory write access in the MAT module! \n";
+
+                    //================================Call Path==================================================================
+                    // check the CP_TRACK_ON_flag status to decide whether or not we need to track access data for individual functions
+                    // Note that for read accesses we cannot update statistics at this point and have to do it when the producer is determined in the "RecordBinding" function
+                    if ( CP.CallPathTrackOn( ) ) 
+                        if ( ! CP.RecordWrite( (ADDRINT) addr, (UINT8) size ) )  cerr<<"\nFailed to record a memory write access in the call path stack! \n";
+
             }
 
             else            // record memory read access
@@ -585,18 +733,19 @@ int  main(int argc, char *argv[])
     string xmlfilename,monitorfilename;
     char temp[100];
     FILE *xmlfile;
-    
-
-   // assume Out_of_the_main_function_scope as the first routine
-   CallStack.push("Out_of_the_main_function_scope");
-   SeenFname.insert("Out_of_the_main_function_scope");
-   NametoADD["Out_of_the_main_function_scope"]=GlobalfunctionNo; 
-   ADDtoName[GlobalfunctionNo]="Out_of_the_main_function_scope";
 
    // reserve the function ID #0 for the case of reading from a memory with no producer!
    NametoADD["UNKNOWN_PRODUCER(CONSTANT_DATA)"]=0x0; 
    ADDtoName[0x0]="UNKNOWN_PRODUCER(CONSTANT_DATA)";
     
+   // assume Out_of_the_main_function_scope as the first routine
+   CallStack.push("Out_of_the_main_function_scope");
+   CP.FuncEnter("Out_of_the_main_function_scope");
+   SeenFname.insert("Out_of_the_main_function_scope");
+
+   NametoADD["Out_of_the_main_function_scope"]=GlobalfunctionNo; 
+   ADDtoName[GlobalfunctionNo]="Out_of_the_main_function_scope";
+
    
     PIN_InitSymbols();
 
@@ -613,10 +762,11 @@ int  main(int argc, char *argv[])
     Verbose_ON=KnobVerbose_ON.Value();  // print something or not during execution
    
 
-    // parse the command line arguments for the main image name and the status of the monitorlist flag
+    // parse the command line arguments for the main image name and the status of the monitorlist and callpath flags
     for (int i=1;i<argc-1;i++)
     {
     	if (!strcmp(argv[i],"-use_monitor_list") ) Monitor_ON = TRUE;
+    	if (!strcmp(argv[i],"-call_path_list") ) CallPath_ON = TRUE;
 	if (!strcmp(argv[i],"--")) 
 	    {
 	      strcpy(temp,argv[i+1]);
@@ -660,7 +810,10 @@ int  main(int argc, char *argv[])
       cerr<<"\nFailed to remove previous <QUAD> elements in the XML file... Aborting! \n";;
       return 3;
     }
-    
+
+    // ------------------ Call Path List file processing ---------------------------------------   
+    if ( CallPath_ON )  CP.BuildFuncList( KnobCallPath.Value( ) );
+
     // ------------------ Monitorlist file processing ---------------------------------------   
     
     if (Monitor_ON)  // user is interested in filtering out 

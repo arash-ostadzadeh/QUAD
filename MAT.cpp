@@ -622,7 +622,7 @@ MAT_ERR_TYPE  MAT::WriteAccess ( UINT16 func, ADDRINT add, UINT8 size )
                 }
         }
     }
-    else    // The trie bucket already exists. first do the ckeck for data size incompatibility, rare but could happen 
+    else    // The trie bucket already exists. first do the ckeck for data size incompatibility, rare but can happen 
     {
 
         BucketAdd= (trieBucket*) (currentLP->list[addressArray[currentLevel]]);	// record the address of the destination bucket for subsequent accesses
