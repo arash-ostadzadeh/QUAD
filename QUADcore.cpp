@@ -1,7 +1,7 @@
 /*
 
 QUAD v2.0
-final revision October 11th, 2013
+final revision December 6th, 2013
 
 This file is part of QUAD Toolset available @:
 http://sourceforge.net/projects/quadtoolset
@@ -56,7 +56,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
  * This file is part of QUAD.
  *
  *  Author: Arash Ostadzadeh
- *  Lastly revised on 11-10-2013
+ *  Lastly revised on 6-12-2013
 */
 //==============================================================================
 
@@ -108,132 +108,10 @@ THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 
-/* ===================================================================== 
-The CallPath class is used to track and save the chain of function calls and provide 
-relevant statistics for each individual function as requested by the user
- ===================================================================== */
-
-class CallPath
-{
-        typedef struct
-        {
-            string func;
-            UINT64 call_num;
-            unordered_set<ADDRINT>* write_UnMA;
-            map <string,unordered_set<ADDRINT>*>* read_UnMA;
-        } CallPathStackElem;    // to keep the summary of memory access statistics for each function call
-
-    public:
-        CallPath( );
-        bool CallPathTrackOn( ) { return CP_TRACK_ON_flag; }
-        void BuildFuncList( string fname );     // put the function names listed in the input text file into the "callcounter" map container
-        void FuncEnter( string func );      // a function is called in the application, check and update the internal data if necessary
-        bool RecordWrite( ADDRINT addr, UINT8 size );   // a write access needs to be recorded
-        bool RecordRead( string producer, ADDRINT addr, UINT8 size );   // a read access needs to be recorded
-
-        void FlushOutput( );
-        
-    private:
-        
-        stack<CallPathStackElem> cp_stack;
-        BOOL CP_TRACK_ON_flag;  // if true means that currently there is a function 
-        map <string,UINT64> callcounter;    // how many times the function has been called so far
-        ofstream cpf;   // the text file to store in the call path data
-        
-};
-
-//====================CallPath function definitions===================================
-CallPath::CallPath( )
-{
-    CP_TRACK_ON_flag=false;
-
-    cpf.open("callpath.txt");
-     if (!cpf)
-     {
-	  cerr<<"\nCannot create the call path summary file (\"callpath.txt\")... Aborting!\n";
-	  exit(1);
-     }
-
-}
-
-void CallPath::BuildFuncList( string fname)
-{
-	ifstream ilistf;
-	ilistf.open(fname.c_str());
-         if (!ilistf)
-	{
-	  cerr<<"\nCannot open the call path list file ("<<ilistf.c_str()<<")... Aborting!\n";
-	  exit(1);
-	}
-
-	string item;
-         do
-         {
-	    ilistf>>item;	// get the next function name in the call path list
-	    if (ilistf.eof()) break;	// oops we are finished!
-	    callcounter[item]=0;        // add the function name to be monitored in the call path, and initialize the number of times called to zero
-         } while(1);	
-	
-	ilistf.close();	    
-}
-
-void CallPath::FuncEnter( string func )
-{
-    CallPathStackElem El;
-    map<string,UINT64>::iterator it=callcounter.find(func);
-
-    El.func=func;
-
-    if ( it==callcounter.end( ) )     // entering a function which we do not want to track in the call path... pause the current data recording if recording is activated
-    {
-        CP_TRACK_ON_flag=false;
-        El.call_num=0;      // 0 is signaling that we are not interested in tracking this function. Anyhow, we have to add the dummy record to the call path stack 
-                                      //  because when the function returns we should be able to update the call path accordingly
-        El.write_UnMA=El.read_UnMA=NULL;    // dummy values, not used anyway
-    }
-    else
-    {           // a function of interest is called, activate a new tracking element
-    
-        CP_TRACK_ON_flag=true;
-        it->second++;   // adjust the number of calling times for the corresponding function
-        El.call_num=it->second;
-        El.write_UnMA= new unordered_set<ADDRINT>;
-        if (!El.write_UnMA)
-        {
-            cerr<<"\nMemory allocation failed in adding a new element to the call path stack... Aborting!\n";
-            exit(1);
-        }
-        
-        El.read_UnMA= new map <string,unordered_set<ADDRINT>*>;
-        if (!El.read_UnMA)
-        {
-            cerr<<"\nMemory allocation failed in adding a new element to the call path stack... Aborting!\n";
-            exit(1);
-        }
-        // report the incident in the call path output file
-        cpf<<El.func<<"("<<El.call_num<<") called"<<endl;
-    }
-    
-    cp_stack.push( El );
-}
-
-            // mymap.at("Saturn") += 272;
-            // mymap.count(x) 0 or 1
-
-bool CallPath::RecordWrite( ADDRINT addr, UINT8 size )
-{
-    UINT8 i;
-    unordered_set<ADDRINT>* ptr= ( cp_stack.top( ) ).write_UnMA;
-    for ( i=0;i<size;i++) ptr->insert( add+i );
-
-}
-
-void CallPath::FlushOutput( ) { cpf.close(); }
-
 /* ===================================================================== */
 #include "MAT.cpp"
+#include "callpath.cpp"
 /* ===================================================================== */
-
 
 /* ===================================================================== */
 /* Global Variables */
@@ -402,8 +280,6 @@ VOID EnterFC_EXTERNAL_OK(char *name)
     
 }
 
-
-
 /* ===================================================================== */
 bool Remove_Previous_QUAD_elements()
 {
@@ -446,7 +322,6 @@ INT32 Usage()
     return -1;
 }
 
-
 /* ===================================================================== */
 VOID  Return(VOID *ip)
 {
@@ -457,7 +332,9 @@ VOID  Return(VOID *ip)
 	   {  
 		   CallStack.pop();
 	   }
-			
+		
+	// update the call path stack
+        CP.FuncReturn( fn_name );
 }
 
 /* ===================================================================== */
@@ -533,7 +410,11 @@ static VOID RecordMem(VOID * ip, CHAR r, VOID * addr, INT32 size, BOOL isPrefetc
                     // check the CP_TRACK_ON_flag status to decide whether or not we need to track access data for individual functions
                     // Note that for read accesses we cannot update statistics at this point and have to do it when the producer is determined in the "RecordBinding" function
                     if ( CP.CallPathTrackOn( ) ) 
-                        if ( ! CP.RecordWrite( (ADDRINT) addr, (UINT8) size ) )  cerr<<"\nFailed to record a memory write access in the call path stack! \n";
+                        if ( ! CP.RecordWrite( (ADDRINT) addr, (UINT8) size ) )  
+                        {
+                            cerr<<"\nFailed to record a memory write access in the call path stack! \n";
+                            exit(1);
+                        }
             }
 
             else            // record memory read access
@@ -586,8 +467,11 @@ static VOID RecordMemSP(VOID * ip, VOID * ESP, CHAR r, VOID * addr, INT32 size, 
                     // check the CP_TRACK_ON_flag status to decide whether or not we need to track access data for individual functions
                     // Note that for read accesses we cannot update statistics at this point and have to do it when the producer is determined in the "RecordBinding" function
                     if ( CP.CallPathTrackOn( ) ) 
-                        if ( ! CP.RecordWrite( (ADDRINT) addr, (UINT8) size ) )  cerr<<"\nFailed to record a memory write access in the call path stack! \n";
-
+                        if ( ! CP.RecordWrite( (ADDRINT) addr, (UINT8) size ) )  
+                        {
+                            cerr<<"\nFailed to record a memory write access in the call path stack! \n";
+                            exit(1);
+                        }
             }
 
             else            // record memory read access
@@ -723,8 +607,7 @@ const char * StripPath(const char * path)
         return path;
 }
 
-
-
+/* ===================================================================== */
 /* ===================================================================== */
 /* ===================================================================== */
 int  main(int argc, char *argv[])

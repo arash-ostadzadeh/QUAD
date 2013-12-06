@@ -1,6 +1,6 @@
 /*
 QUAD v2.0
-final revision October 21st, 2013
+final revision December 6th, 2013
 
 This file is part of QUAD Toolset available @:
 http://sourceforge.net/projects/quadtoolset
@@ -57,7 +57,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
  * This file is part of QUAD.
  *
  *  Author: Arash Ostadzadeh
- *  Lastly revised on 21-10-2013
+ *  Lastly revised on 6-12-2013
 */
 //==============================================================================
 
@@ -462,8 +462,16 @@ MAT_ERR_TYPE  RecordBinding(UINT16 producer, UINT16 consumer, ADDRINT add, UINT8
 	tempptr->bytes=tempptr->bytes+size;
 	if (tempptr->bytes > MaxLabel) MaxLabel=tempptr->bytes; // only needed for graph visualization coloring!
 	for ( i=0;i<size;i++) tempptr->UnMA->insert(add+i); // all the memroy addresses corresponding to the read size should be checked to have an accurate UnMA
-
 	//****   what to do if insertion is not successful, memory problems!!!!!!!!!!!!
+
+          //================================Call Path==================================================================
+          // check the CP_TRACK_ON_flag status to decide whether or not we need to track access data for individual functions
+          if ( CP.CallPathTrackOn( ) ) 
+              if ( ! CP.RecordRead( ADDtoName[producer], add, size ) )  
+              {
+                cerr<<"\nFailed to record a memory read access in the call path stack! \n";
+                exit(1);
+              }
 	
     return SUCCESS; /* successful recording */
 }
