@@ -81,7 +81,7 @@ void CallPath::BuildFuncList( string fname)
 	ilistf.open(fname.c_str());
          if (!ilistf)
 	{
-	  cerr<<"\nCannot open the call path list file ("<<ilistf.c_str()<<")... Aborting!\n";
+	  cerr<<"\nCannot open the call path list file ("<<fname.c_str()<<")... Aborting!\n";
 	  exit(1);
 	}
 
@@ -109,7 +109,8 @@ void CallPath::FuncEnter( string func )
         CP_TRACK_ON_flag=false;
         El.call_num=0;      // 0 is signaling that we are not interested in tracking this function. Anyhow, we have to add the dummy record to the call path stack 
                                       //  because when the function returns we should be able to update the call path accordingly
-        El.write_UnMA=El.read_UnMA=NULL;    // dummy values, not used anyway
+        El.write_UnMA=NULL;    // dummy values, not used anyway
+        El.read_UnMA=NULL;
     }
     else
     {           // a function of interest is called, activate a new tracking element
@@ -171,7 +172,6 @@ void CallPath::FuncReturn( string func )
          // if call_num for the current top function is non-zero, it means that we have been tracking this particular function in the call path
          if ( cp_stack.top( ).call_num ) CP_TRACK_ON_flag=true;
          else CP_TRACK_ON_flag=false;
-        }
     }
 }
 
