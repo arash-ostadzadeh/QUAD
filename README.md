@@ -118,6 +118,11 @@ Ignores memory accesses within application's stack region. By default, QUADcore 
 Creates output report files only for certain function(s) in the application and filters out the rest (the functions are listed in a text file whose name follows). This option is helpful if there is a need to have the output report files only for certain function(s) and not all. The names of the function to monitor should be specified in a normal text file, whose name is provided in the following argument.
 
 ```
+-call_path_list  [filename]
+```
+Creates output report file for the chain of function calls containing the total number of R/W UnMAs used for each individual function call. The functions which are tracked in the call chain are listed in a text file whose name follows.
+
+```
 -xmlfile
 ```
 Specifies the filename for the output data in the XML format. The main output file is in the XML format and named 'dek_arch.xml' by default. This can be changed using this option.
@@ -168,6 +173,8 @@ The elements that are written in the XML file are stored under the root element,
 ```
 
 * 'QDUGraph.dot' is output for visualization and contains all the binding information which is contained in the main XML file. For further details, refer to 'Output Visualization' section in the following.
+
+* Call path report file ('callpath.txt') is created when the corresponding command line option is activated. This text file provides summary of statistics on the total R/W UnMAs for selected functions as requested by the user. Note that the information are provided per function call, so a particular function name is succeeded by a number inside parentheses, which indicates the calling time number for that function. "W" represents 'wrtite' access and "R" is for 'read' access. The output file includes the order of function calls and returns as well.
 
 * Summary report file ('ML_OV_Summary.txt') is also created containing information about the functions specified in a monitor list, only in case the user has specified the relevant option in the command line. This text file basically provides statistics on total bytes/UnMA for selected functions. There are eight different values that are explained in the following.
 
