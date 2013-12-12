@@ -108,13 +108,12 @@ class CallPath
         void FuncReturn( string func );      // a called function returns control to the caller, check and update the internal data
         bool RecordWrite( ADDRINT addr, UINT8 size );   // a write access needs to be recorded
         bool RecordRead( string producer, ADDRINT addr, UINT8 size );   // a read access needs to be recorded
-
-        void FlushOutput( ) { cpf.close(); }
+        void FlushOutput( );
         
     private:
         
         stack<CallPathStackElem> cp_stack;
-        BOOL CP_TRACK_ON_flag;  // if true means that currently there is a function 
+        BOOL CP_TRACK_ON_flag;  // if true means that currently there is a function on top of the call path stack which is tracked for summary of statistics
         map <string,UINT64> callcounter;    // how many times the function has been called so far
         ADDRINT temp_adds[8];   //  this array is used to add memory addresses to the UnMA sets via the "range" strategy of the set's insert method 
         ofstream cpf;   // the text file to store in the call path data

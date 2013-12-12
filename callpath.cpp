@@ -89,6 +89,7 @@ void CallPath::BuildFuncList( string fname)
          do
          {
 	    ilistf>>item;	// get the next function name in the call path list
+             // getline( ilistf, item );
 	    if (ilistf.eof()) break;	// oops we are finished!
 	    callcounter[item]=0;        // add the function name to be monitored in the call path, and initialize the number of times called to zero
          } while(1);	
@@ -150,21 +151,20 @@ void CallPath::FuncReturn( string func )
         if ( CP_TRACK_ON_flag )     // CP_TRACK_ON_flag is true, which means that we have been tracking this particular function in the call path
         {
             // dump the summary of tracking statistics to the call path output file
-            cpf << "W" << endl << ( cp_stack.top().write_UnMA )->size( ) << endl;
-            
+            cpf << "W\t" << ( cp_stack.top().write_UnMA )->size( ) << endl;
+
             delete cp_stack.top().write_UnMA; // release the memory allocated for the set of "write" UnMAs 
             
-            cpf << "R" << endl;
             for ( map<string,unordered_set<ADDRINT>*>::iterator it= ( cp_stack.top().read_UnMA )->begin(); it != ( cp_stack.top().read_UnMA )->end(); ++it )
             {
-                 cpf << it->first << " " << (it->second)->size( ) << endl;
+                 cpf <<  "R\t" << it->first << " " << (it->second)->size( ) << endl;
                  delete it->second;     // release the memory allocated for individual sets
             }
-            
-            cpf<<func<<"("<<cp_stack.top( ).call_num<<") return"<<endl;
+
+            cpf << func << "(" << cp_stack.top( ).call_num << ") return" << endl;
             delete cp_stack.top().read_UnMA;    // release the memory allocated for the map of all "read" UnMAs
         } // end of "CP_TRACK_ON_flag is true"
-        else cpf<<func<<" return"<<endl;
+        // else cpf<<func<<" return"<<endl;
         
         cp_stack.pop( );    // remove the top element in the call path stack
             
@@ -218,5 +218,10 @@ bool CallPath::RecordRead( string producer, ADDRINT addr, UINT8 size )
     } catch ( bad_alloc& ba )  { return false; }
     
     return true;
+}
+//==============================================================================
+void CallPath::FlushOutput( ) 
+{ 
+    cpf.close(); 
 }
 //==============================================================================
