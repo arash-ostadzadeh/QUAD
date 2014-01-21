@@ -1,11 +1,11 @@
 /*
 QUAD v2.0
-final revision October 11th, 2013
+final revision January 20th, 2014
 
 This file is part of QUAD Toolset available @:
 http://sourceforge.net/projects/quadtoolset
 
-Copyright © 2008-2013 Arash Ostadzadeh (ostadzadeh@gmail.com)
+Copyright © 2008-2014 Arash Ostadzadeh (ostadzadeh@gmail.com)
 http://www.linkedin.com/in/ostadzadeh
 
 
@@ -55,7 +55,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
  * This file is part of QUAD.
  *
  *  Author: Arash Ostadzadeh
- *  Lastly revised on 11-10-2013
+ *  Lastly revised on 20-1-2014
 */
 //==============================================================================
 
@@ -85,6 +85,9 @@ THE POSSIBILITY OF SUCH DAMAGE.
 using namespace std;
 using std::tr1::unordered_set;
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Errors encountered using functions related to MAT
 typedef enum {
@@ -96,16 +99,112 @@ typedef enum {
 } MAT_ERR_TYPE;
 
 
-// Define the "trie" data structure for tracing adresses
-struct trieNode 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+/*
+class MemPool
 {
-    struct trieNode* list[16];   // Each cell corresponds to a hexadecimal digit in the memory address 
+    public:
+        MemPool ( size_t ReservedSize=0 );
+        void * Alloc ( size_t size );
+        void Dealloc ( void * ptr, size_t size );
+        
+     private:
+         size_t CurrentPoolSize;
+         size_t CurrentlyUsed;
 };
+
+*/
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//  To keep and track the status of data read by consumers from a particular location with regard to its freshness
+enum ConStatusFlagVal { OLD, FRESH };
+class ConsumptionStatusFlags
+{
+        struct ConsFlagEntity;  // forward declaration
+        
+    public:
+        ConsumptionStatusFlags ( ) 
+        { 
+                size=0;         // initially no consumer is seen
+                capacity=3;     // initial size of the array ( I am not expecting that many concurrent consumers of a particular location! ) adjust if necessary
+                if (! (flags_array = (ConsFlagEntity *) malloc( sizeof (ConsFlagEntity) * capacity ) ) )
+                {
+                    cerr<<"\nCannot create the initial array of consumption status flags in MAT. Memory allocation failed... aborting!\n";
+                    exit(1);  // Memory allocation failed
+                }
+        }
+        
+        // a read is issued by consumer, check and report the current status of the data at the corresponding location, and then mark it as OLD for this consumer
+        ConStatusFlagVal CheckAndClearFlag ( UINT16 consumer )
+        {
+                 UINT16 i=0;
+                
+                 for ( ; i<size ; i++ ) 
+                    if ( flags_array[i].consID==consumer )      // the consumer is already in the list
+                        if ( flags_array[i].flag==OLD ) return OLD;
+                        else { flags_array[i].flag=OLD; return FRESH; }
+                 
+                 // the consumer is a new consumer (the first time seen)
+                 
+                 if ( size < capacity )     // still space left in the reserved array
+                 {
+                     flags_array[size].consID=consumer;
+                     flags_array[size].flag=OLD;
+                     size++;
+                 }
+                 else    // do realloc, no space left in the reserved array
+                 {
+                     capacity+=3;
+                     
+                     if (capacity<size) 
+                     {
+                            cerr<<"\nOverflow in extending the array of consumption status flags in MAT... aborting!\n";
+                            exit(2);  // the size and capacity variables should be adjusted
+                     }
+
+                     if (! (flags_array = (ConsFlagEntity *) realloc ( flags_array, sizeof (ConsFlagEntity) * capacity ) ) )
+                     {
+                            cerr<<"\nCannot extend the array of consumption status flags in MAT. Memory allocation failed... aborting!\n";
+                            exit(1);  // Memory allocation failed
+                     }
+                     flags_array[size].consID=consumer;
+                     flags_array[size].flag=OLD;
+                     size++;
+                 }
+                 
+                 return FRESH;
+        }
+        
+        // a new write is issued for the corresponding location, reset the flags for all
+        void SetAllFlags ( void )   {    for ( UINT16 i=0; i<size ;i++ )   flags_array[i].flag=FRESH;   }
+        
+     private:
+        struct ConsFlagEntity
+        {
+            UINT16 consID;
+            ConStatusFlagVal flag;
+        } * flags_array;
+        
+        UINT16 size, capacity;      // size shows the current number of consumer functions for the corresponding location, capacity indicates the maximum number of entities reserved in the flags_array
+                                                   // note that in the current implementation 65535 concurrent consumer functions may be tracked for each location
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct
 {
 	UINT16 last_producer;     // for now each (prodocer) function is assigned a unique id number (0..65535). Can be replaced with a link to a data block that contains info about the function
 	UINT8 data_size;	// for now the only legitimate values are 1,2,4, and 8
+         ConsumptionStatusFlags * UnDV_flags;   // for each data value once read by a particular consumer we keep a record to determine the freshness of values later for subsequent reads
 	// *** other members should be added later, at least PTS and PSN from the cQUAD profiling data
 } trieBucket;
 
@@ -121,18 +220,26 @@ typedef struct
 // Structure definition to record producer->consumer Binding info 
 typedef struct 
  {
-	UINT64 bytes;
-	
 	// if the producer and consumer are some kind of entry point (directory) to the data records, they may be left out of the actual data fields in the record... *** to be checked later
 	UINT16 producer;  
 	UINT16 consumer;
-	
+
+	UINT64 bytes;   // number of bytes read by the consumer, whose data was produced by the producer
 	unordered_set<ADDRINT>* UnMA;     // **** a customized set implementation to replace STL set
-	// set UnDV;  not sure if this is the place to keep it, *** check later!
+	UINT64 UnDV;    // // number of fresh bytes read by the consumer (data that has not been read before-first time reads- by the consumer), whose data was produced by the producer
 	
 	// UINT8 DCC_file_ptr_idx;	// (0) is reserved for no monitoring flag, (idx-1) points to the corresponding ofstream to dump the DCC flat profile, maximum DCCs that can be monitored is 255
 } Binding;
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Define the "trie" data structure for tracing adresses
+struct trieNode 
+{
+    struct trieNode* list[16];   // Each cell corresponds to a hexadecimal digit in the memory address 
+};
 
 // For easy access to individual hexadecimal digits in memory addresses (supports up to 64-bit addresses)
 typedef struct 
@@ -156,20 +263,9 @@ typedef struct
 } AddressSplitter;
 
 
-/*
-class MemPool
-{
-    public:
-        MemPool ( size_t ReservedSize=0 );
-        void * Alloc ( size_t size );
-        void Dealloc ( void * ptr, size_t size );
-        
-     private:
-         size_t CurrentPoolSize;
-         size_t CurrentlyUsed;
-};
-
-*/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // forward declaration for RecordBinding ****  should be integrated inside MAT after revising the data structure used for implementation!!!
 MAT_ERR_TYPE  RecordBinding(UINT16 producer, UINT16 consumer, ADDRINT add, UINT8 size);
