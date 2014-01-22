@@ -99,107 +99,6 @@ typedef enum {
 } MAT_ERR_TYPE;
 
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-/*
-class MemPool
-{
-    public:
-        MemPool ( size_t ReservedSize=0 );
-        void * Alloc ( size_t size );
-        void Dealloc ( void * ptr, size_t size );
-        
-     private:
-         size_t CurrentPoolSize;
-         size_t CurrentlyUsed;
-};
-
-*/
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-//  To keep and track the status of data read by consumers from a particular location with regard to its freshness
-enum ConStatusFlagVal { OLD, FRESH };
-class ConsumptionStatusFlags
-{
-        struct ConsFlagEntity;  // forward declaration
-        
-    public:
-        ConsumptionStatusFlags ( ) 
-        { 
-                size=0;         // initially no consumer is seen
-                capacity=3;     // initial size of the array ( I am not expecting that many concurrent consumers of a particular location! ) adjust if necessary
-                if (! (flags_array = (ConsFlagEntity *) malloc( sizeof (ConsFlagEntity) * capacity ) ) )
-                {
-                    cerr<<"\nCannot create the initial array of consumption status flags in MAT. Memory allocation failed... aborting!\n";
-                    exit(1);  // Memory allocation failed
-                }
-        }
-        
-        // a read is issued by consumer, check and report the current status of the data at the corresponding location, and then mark it as OLD for this consumer
-        ConStatusFlagVal CheckAndClearFlag ( UINT16 consumer )
-        {
-                 UINT16 i=0;
-                
-                 for ( ; i<size ; i++ ) 
-                    if ( flags_array[i].consID==consumer )      // the consumer is already in the list
-                        if ( flags_array[i].flag==OLD ) return OLD;
-                        else { flags_array[i].flag=OLD; return FRESH; }
-                 
-                 // the consumer is a new consumer (the first time seen)
-                 
-                 if ( size < capacity )     // still space left in the reserved array
-                 {
-                     flags_array[size].consID=consumer;
-                     flags_array[size].flag=OLD;
-                     size++;
-                 }
-                 else    // do realloc, no space left in the reserved array
-                 {
-                     capacity+=3;
-                     
-                     if (capacity<size) 
-                     {
-                            cerr<<"\nOverflow in extending the array of consumption status flags in MAT... aborting!\n";
-                            exit(2);  // the size and capacity variables should be adjusted
-                     }
-
-                     if (! (flags_array = (ConsFlagEntity *) realloc ( flags_array, sizeof (ConsFlagEntity) * capacity ) ) )
-                     {
-                            cerr<<"\nCannot extend the array of consumption status flags in MAT. Memory allocation failed... aborting!\n";
-                            exit(1);  // Memory allocation failed
-                     }
-                     flags_array[size].consID=consumer;
-                     flags_array[size].flag=OLD;
-                     size++;
-                 }
-                 
-                 return FRESH;
-        }
-        
-        // a new write is issued for the corresponding location, reset the flags for all
-        void SetAllFlags ( void )   {    for ( UINT16 i=0; i<size ;i++ )   flags_array[i].flag=FRESH;   }
-        
-     private:
-        struct ConsFlagEntity
-        {
-            UINT16 consID;
-            ConStatusFlagVal flag;
-        } * flags_array;
-        
-        UINT16 size, capacity;      // size shows the current number of consumer functions for the corresponding location, capacity indicates the maximum number of entities reserved in the flags_array
-                                                   // note that in the current implementation 65535 concurrent consumer functions may be tracked for each location
-};
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct
 {
 	UINT16 last_producer;     // for now each (prodocer) function is assigned a unique id number (0..65535). Can be replaced with a link to a data block that contains info about the function
@@ -231,9 +130,6 @@ typedef struct
 	// UINT8 DCC_file_ptr_idx;	// (0) is reserved for no monitoring flag, (idx-1) points to the corresponding ofstream to dump the DCC flat profile, maximum DCCs that can be monitored is 255
 } Binding;
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Define the "trie" data structure for tracing adresses
 struct trieNode 
@@ -306,6 +202,154 @@ class MAT
         MAT_ERR_TYPE  Nullify_Old_Producer ( ADDRINT add, int8_t size );	// Recursively nullify old producers already present in the trie in case the size of the current write is larger than the size of a previous write
         MAT_ERR_TYPE  Check_Prev_7_Addresses ( ADDRINT add, int8_t size );	// Check and correct, if necessary, the "size" field of the previous 7 addresses, to make sure that the current write access does not land amid an already existing data object
         UINT8  Seek_Real_Producer ( ADDRINT add, UINT16 & producer );      // Check "add" and return the size of the last production in that particular address and the producer function ID, if any. The second argument is treated as output.
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//  To keep and track the status of data read by consumers from a particular location with regard to its freshness
+enum ConStatusFlagVal { OLD, FRESH };
+
+class ConsumptionStatusFlags
+{
+    struct ConsFlagEntity;  // forward declaration
+        
+    public:
+        ConsumptionStatusFlags ( ) 
+        { 
+                size=0;         // initially no consumer is seen
+                capacity=3;     // initial size of the array ( I am not expecting that many concurrent consumers of a particular location! ) adjust if necessary
+                if (! (flags_array = (ConsFlagEntity *) malloc( sizeof (ConsFlagEntity) * capacity ) ) )
+                {
+                    cerr<<"\nCannot create the initial array of consumption status flags in MAT. Memory allocation failed... aborting!\n";
+                    exit(1);  // Memory allocation failed
+                }
+        }
+        
+        // a read is issued by consumer, check and report the current status of the data at the corresponding location, and then mark it as OLD for this consumer
+        ConStatusFlagVal CheckAndClearFlag ( UINT16 consumer )
+        {
+                 UINT16 i=0;
+                
+                 for ( ; i<size ; i++ ) 
+                    if ( flags_array[i].consID==consumer )      // the consumer is already in the list
+                        if ( flags_array[i].flag==OLD ) return OLD;
+                        else { flags_array[i].flag=OLD; return FRESH; }
+                 
+                 // the consumer is a new consumer (the first time seen)
+                 
+                 if ( size < capacity )     // still space left in the reserved array
+                 {
+                     flags_array[size].consID=consumer;
+                     flags_array[size].flag=OLD;
+                     size++;
+                 }
+                 else    // do realloc, no space left in the reserved array
+                 {
+                     capacity+=3;   // adjust the incremental value if needed
+                     
+                     if (capacity<size)     // can be removed, somehow redundant check!
+                     {
+                            cerr<<"\nOverflow in extending the array of consumption status flags in MAT... aborting!\n";
+                            exit(2);  // the size and capacity variables should be adjusted
+                     }
+
+                     if (! (flags_array = (ConsFlagEntity *) realloc ( flags_array, sizeof (ConsFlagEntity) * capacity ) ) )
+                     {
+                            cerr<<"\nCannot extend the array of consumption status flags in MAT. Memory allocation failed... aborting!\n";
+                            exit(1);  // Memory allocation failed
+                     }
+                     flags_array[size].consID=consumer;
+                     flags_array[size].flag=OLD;
+                     size++;
+                 }
+                 
+                 return FRESH;
+        }
+        
+        MAT_ERR_TYPE  CopyStatusFlags ( ADDRINT destination, struct trieNode* root, UINT8 TrieDepth )   // Copy the status flags from this object to the object found at the destination address.
+        // The object at the destination is guaranteed to be an empty just created one, so no already existing list will be preserved! This rountine is expected to be rarely used.
+        // Only in MAT::Check_Prev_7_Addresses, when a new write access in fully enclosed in a previous write access, hence a new record should be added for the extra end portion
+        {
+            AddressSplitter* ASP= (AddressSplitter *) &destination;
+            ConsumptionStatusFlags * des_flag_obj_ptr;
+            UINT8  currentLevel=0;
+            struct trieNode* currentLP=root;
+            // Reserve space for the worst case: 64-bit address needs a 16-level trie
+            //  **** Further extension: can sizeof be determined during the compilation? if so use conditional macro instead for optimization, no need for the extra reservation, etc.
+            UINT8 addressArray[16];
+            
+            
+            // first find the ConsumptionStatusFlags object at the destination address
+            if (TrieDepth==16)  // for 64-bit addresses
+            {
+                addressArray[0]=ASP->h15;
+                addressArray[1]=ASP->h14;
+                addressArray[2]=ASP->h13;
+                addressArray[3]=ASP->h12;
+                addressArray[4]=ASP->h11;
+                addressArray[5]=ASP->h10;
+                addressArray[6]=ASP->h9;
+                addressArray[7]=ASP->h8;
+                addressArray[8]=ASP->h7;
+                addressArray[9]=ASP->h6;
+                addressArray[10]=ASP->h5;
+                addressArray[11]=ASP->h4;
+                addressArray[12]=ASP->h3;
+                addressArray[13]=ASP->h2;
+                addressArray[14]=ASP->h1;
+                addressArray[15]=ASP->h0;
+            }
+            else    // for 32-bit addresses
+            {
+                addressArray[0]=ASP->h7;
+                addressArray[1]=ASP->h6;
+                addressArray[2]=ASP->h5;
+                addressArray[3]=ASP->h4;
+                addressArray[4]=ASP->h3;
+                addressArray[5]=ASP->h2;
+                addressArray[6]=ASP->h1;
+                addressArray[7]=ASP->h0;
+            }    
+
+           while( (currentLevel<TrieDepth-1) && (currentLP=currentLP->list[addressArray[currentLevel++]]) );  // proceed as far as possible in the trie 
+           
+           // ****** I am expecting a trieBucket be definitely present at the destination address (we just added one!!!) so no checking is necessary for the pointers
+           des_flag_obj_ptr=( (trieBucket*) (currentLP->list[addressArray[currentLevel]]) )->UnDV_flags;
+           
+           if ( des_flag_obj_ptr->capacity != capacity )  // do a reallocation for the destination object
+           {
+               des_flag_obj_ptr->capacity=capacity;
+                if (! (des_flag_obj_ptr->flags_array = (ConsFlagEntity *) realloc ( des_flag_obj_ptr->flags_array, sizeof (ConsFlagEntity) * capacity ) ) )
+                {
+                      cerr<<"\nCannot extend the array of consumption status flags in MAT. Memory allocation failed... aborting!\n";
+                      return MEM_ALLOC_FAIL;
+                }
+           }
+           
+           for (UINT16 i=0; i<size; i++)  // copy the flags array
+           {
+                des_flag_obj_ptr->flags_array[i].consID=flags_array[i].consID;
+                des_flag_obj_ptr->flags_array[i].flag=flags_array[i].flag;
+           }
+           
+           des_flag_obj_ptr->size=size;     // adjust the size for the destination object
+            return SUCCESS;
+        }
+        
+        // a new write is issued for the corresponding location, reset the flags for all
+        void SetAllFlags ( void )   {    for ( UINT16 i=0; i<size ;i++ )   flags_array[i].flag=FRESH;   }
+        
+     private:
+        struct ConsFlagEntity
+        {
+            UINT16 consID;
+            ConStatusFlagVal flag;
+        } * flags_array;
+        
+        UINT16 size, capacity;      // size shows the current number of consumer functions for the corresponding location, capacity indicates the maximum number of entities reserved in the flags_array
+                                                   // note that in the current implementation 65535 concurrent consumer functions may be tracked for each location
 };
 
 #endif //__MAT__H__

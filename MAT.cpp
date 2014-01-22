@@ -1,11 +1,11 @@
 /*
 QUAD v2.0
-final revision October 21st, 2013
+final revision January 22nd, 2014
 
 This file is part of QUAD Toolset available @:
 http://sourceforge.net/projects/quadtoolset
 
-Copyright © 2008-2013 Arash Ostadzadeh (ostadzadeh@gmail.com)
+Copyright © 2008-2014 Arash Ostadzadeh (ostadzadeh@gmail.com)
 http://www.linkedin.com/in/ostadzadeh
 
 
@@ -55,7 +55,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
  * This file is part of QUAD.
  *
  *  Author: Arash Ostadzadeh
- *  Lastly revised on 21-10-2013
+ *  Lastly revised on 22-1-2014
 */
 //==============================================================================
 
@@ -63,37 +63,6 @@ THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "MAT.h"
 
-//////////////////////////////////////////////////////////////////////
-//  Definitions of the "MemPool" member functions  //
-//////////////////////////////////////////////////////////////////////
-
-/*
-
-MemPool::MemPool ( size_t ReservedSize )
-{
-         CurrentPoolSize=0;     // ***  to be revised once an advanced MemPool implementation is carried out
-         CurrentlyUsed=0;
-}
-
-//==============================================================================
-void * MemPool::Alloc ( size_t size )
-{
-    void * temp;
-    temp=new char [size];
-    if (temp) CurrentlyUsed+=size;
-    
-    return temp;
-}
-
-//==============================================================================
-void MemPool::Dealloc ( void * ptr, size_t size )   // size not needed for de-allocation, just to update the currently used space in the MemPool
-{
-    CurrentlyUsed-=size;
-    delete [] ptr;
-}
-
-*/
-        
 /////////////////////////////////////////////////////////////////
 //  Definitions of the "MAT" member functions   //
 /////////////////////////////////////////////////////////////////
@@ -431,7 +400,7 @@ MAT_ERR_TYPE  MAT::Nullify_Old_Producer ( ADDRINT add, int8_t size )
 
 //==============================================================================
 // Check and correct, if necessary, the 7 addresses proior to the current "add". "size" indicates the size of the current write access
-MAT_ERR_TYPE  MAT::Check_Prev_7_Addresses ( ADDRINT add, int8_t size )
+MAT_ERR_TYPE  MAT::Check_Prev_7_Addresses ( ADDRINT add, int8_t size )  // ***** size should be int8_t or UINT8?!! check it it seems to be ok if converted to UINT8
 {
     ADDRINT check_add=add-7;
     AddressSplitter* ASP= (AddressSplitter *) &check_add;
@@ -503,11 +472,15 @@ MAT_ERR_TYPE  MAT::Check_Prev_7_Addresses ( ADDRINT add, int8_t size )
                 ( (trieBucket*) (currentLP->list[addressArray[currentLevel]]) )->data_size = add - check_add;
                 
                 // *****  be aware of the extra parameters needed to record a write access, such as PTS, PSN, etc.
+                
+                // note that the new record will be fresh one (will cause a triebucket to be created) as the range it is going to cover previously was owned by the current record at the checked address!
                 if ( WriteAccess ( ( (trieBucket*) (currentLP->list[addressArray[currentLevel]]) )->last_producer, 
                                          add+size,      // new starting address
                                          check_add+check_add_sz-add-size ) != SUCCESS ) return MEM_ALLOC_FAIL;    // Adding the new record failed. inform the caller
-                 
-                return SUCCESS;
+                                         
+                // copy the array of consumption status flags from the checked address to the new record created in order to preserve the accuracy of UnDVs in the new place...                          
+                // note that if we are here it means that the new trieBucket has definitely been created in the previous call to WriteAccess!
+                return   (  ((trieBucket*) (currentLP->list[addressArray[currentLevel]]) )->UnDV_flags->CopyStatusFlags( add+size , root, TrieDepth )  )
             }
             
             //  the last possibility -> the last effective address belonging to the write access at "check_add" lands somewhere in the range of the current write access, just correct the corresponding "size" field
@@ -608,7 +581,12 @@ MAT_ERR_TYPE  MAT::WriteAccess ( UINT16 func, ADDRINT add, UINT8 size )
                 BucketAdd=(trieBucket*) (currentLP->list[addressArray[currentLevel]]);	// record the address of the destination bucket for subsequent accesses
                 BucketAdd->last_producer = func;
                 BucketAdd->data_size = size;
-                // *** more to be added later
+                if (! (BucketAdd->UnDV_flags=new ConsumptionStatusFlags) )  // using "new" because of the constructor in the class
+                {
+                        cerr<<"\nCannot create the consumption status flags in MAT. Memory allocation failed in tracing a memory write access... \n";
+                        return MEM_ALLOC_FAIL; // Memory allocation failed
+                }
+                // *** more may be added later
                 
                 // check up to the previous 7 addresses to make sure that the current write access does not land amid an already existing data object. 
                 // do the adjustments for the "size" field of previous write accesses when necessary.
@@ -617,7 +595,7 @@ MAT_ERR_TYPE  MAT::WriteAccess ( UINT16 func, ADDRINT add, UINT8 size )
                 // **** Further extension: size remains unchanged during the function call, try to optimize by removing from the formal parameters, any performance gain?!
                 if ( Check_Prev_7_Addresses ( add, size ) != SUCCESS )  // new record may be added as the result of a correction
                 {
-                    cerr<<"\nMemory allocation failed during the checkup process for the previous write access. A record was supposed to be added to the trie because the current write access partially overrode a previous write access  ... \n";
+                    cerr<<"\nMemory allocation failed during the checkup process for former write accesses. A record was supposed to be added to the trie because the current write access partially overrode a previous write access  ... \n";
                     return MEM_ALLOC_FAIL;  // Memory allocation failed
                 }
         }
