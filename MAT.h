@@ -164,7 +164,7 @@ typedef struct
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // forward declaration for RecordBinding ****  should be integrated inside MAT after revising the data structure used for implementation!!!
-MAT_ERR_TYPE  RecordBinding(UINT16 producer, UINT16 consumer, ADDRINT add, UINT8 size);
+MAT_ERR_TYPE  RecordBinding(UINT16 producer, UINT16 consumer, ADDRINT add, UINT8 size, bool fresh);
 
 
 class MAT
@@ -201,7 +201,7 @@ class MAT
 		
         MAT_ERR_TYPE  Nullify_Old_Producer ( ADDRINT add, int8_t size );	// Recursively nullify old producers already present in the trie in case the size of the current write is larger than the size of a previous write
         MAT_ERR_TYPE  Check_Prev_7_Addresses ( ADDRINT add, int8_t size );	// Check and correct, if necessary, the "size" field of the previous 7 addresses, to make sure that the current write access does not land amid an already existing data object
-        UINT8  Seek_Real_Producer ( ADDRINT add, UINT16 & producer );      // Check "add" and return the size of the last production in that particular address and the producer function ID, if any. The second argument is treated as output.
+        trieBucket*  Seek_Real_Producer ( ADDRINT add );      // Check "add" and return the trieBucket address of that location, if any.
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -339,7 +339,10 @@ class ConsumptionStatusFlags
         }
         
         // a new write is issued for the corresponding location, reset the flags for all
-        void SetAllFlags ( void )   {    for ( UINT16 i=0; i<size ;i++ )   flags_array[i].flag=FRESH;   }
+        void ResetAllFlags ( void )   {    for ( UINT16 i=0; i<size ;i++ )   flags_array[i].flag=FRESH;   }
+        
+        // Destructor needed to free the dynamically allocated memory
+        ~ConsumptionStatusFlags ( )   {   free ( flags_array );  }
         
      private:
         struct ConsFlagEntity

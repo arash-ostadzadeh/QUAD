@@ -174,7 +174,7 @@ vector<DCC_binding>::size_type  MAT::DCC_Binding_Size ( )
 */
 
 //==============================================================================
-UINT8  MAT::Seek_Real_Producer ( ADDRINT add, UINT16 & producer )
+trieBucket*  MAT::Seek_Real_Producer ( ADDRINT add )
 {
 
     UINT8  currentLevel=0;
@@ -221,13 +221,7 @@ UINT8  MAT::Seek_Real_Producer ( ADDRINT add, UINT16 & producer )
     while( (currentLevel<TrieDepth-1) && (currentLP=currentLP->list[addressArray[currentLevel++]]) );  // proceed as far as possible in the trie 
 
     if ( ! currentLP ) return 0;    // this particular address not been written to previously
-    
-    trieBucket* tempptr=  (trieBucket*) (currentLP->list[addressArray[currentLevel]]) ;
-    if ( ! tempptr )  return 0;    // this particular address not been written to previously
-    
-    //  report the size of data object and the producer ID
-    producer=tempptr->last_producer;
-    return tempptr->data_size;
+    return (trieBucket*) (currentLP->list[addressArray[currentLevel]]) ;  // if null is returned again means that the particular address not been written to previously
 }
 
 //==============================================================================
@@ -236,6 +230,7 @@ MAT_ERR_TYPE  MAT::ReadAccess ( UINT16 func, ADDRINT add, UINT8 size )
 
     UINT8  currentLevel=0;
     struct trieNode* currentLP=root;
+    trieBucket* tempptr;
     AddressSplitter* ASP= (AddressSplitter *) &add;
     
     // Reserve space for the worst case: 64-bit address needs a 16-level trie
@@ -279,45 +274,54 @@ MAT_ERR_TYPE  MAT::ReadAccess ( UINT16 func, ADDRINT add, UINT8 size )
 
     if ( currentLP ) 
     {
-      trieBucket* tempptr=  (trieBucket*) (currentLP->list[addressArray[currentLevel]]) ;
+      tempptr=(trieBucket*) (currentLP->list[addressArray[currentLevel]]);
 
       if ( tempptr )   // there is a bucket for this address
       {
-        if (size <= tempptr->data_size ) return RecordBinding ( tempptr->last_producer, func, add, size );
+        if (size <= tempptr->data_size ) return RecordBinding ( tempptr->last_producer, func, add, size, (tempptr->UnDV_flags->CheckAndClearFlag( func ))? true : false );  // OLD=0, FRESH=1
 
         // the consumer function is reading data with a size exceeding the recorded data size for the current producer of that specific address.
-        if ( RecordBinding ( tempptr->last_producer, func, add, tempptr->data_size ) != SUCCESS ) return BINDING_RECORD_FAIL;
-        return MAT::ReadAccess ( func, add+tempptr->data_size, size - tempptr->data_size );      // issue another virtual read access for the uncovered portion (this is for memory accesses with sizes more that what is currently recorded at that particular address)
+        if ( RecordBinding ( tempptr->last_producer, func, add, tempptr->data_size, (tempptr->UnDV_flags->CheckAndClearFlag( func ))? true : false ) != SUCCESS ) return BINDING_RECORD_FAIL;
+
+        // issue another virtual read access for the uncovered portion (this is for memory accesses with sizes more that what is currently recorded at that particular address)
+        return MAT::ReadAccess ( func, add+tempptr->data_size, size - tempptr->data_size );      
       }
     }
     
-    //  apparently we are reading from a location  which was not previously written to! however, before drawing any conclusion, we have to check to ensure that the read instruction is not indeed landing in the middle of a data object!
+    //  Apparently we are reading from a location  which was not previously written to! 
+    //  However, before drawing any conclusion, we have to check to ensure that the read instruction is not indeed landing in the middle of a data object!
 
-    // some local variables to keep track of the real producer, if any.
     ADDRINT add_prod=add-1;     // start the probe from the previous address, as soon as detecting a recorded production, no need to check the addresses which come in prior.
-    UINT16 ID_prod;
-    UINT8 size_prod=0;      // was forced by gcc to initialize this!!!!!! though it will never be used uninitialized in line# 335
     
     // do the following check for at most 7 addresses before the current "add" or until Seek_Real_Producer return a non-zero value
-    while (  (add_prod+8 > add)  &&  ( ! (size_prod = Seek_Real_Producer ( add_prod, ID_prod ) ) )   )  add_prod--;     // "ID_prod" contains the ID of the producer, if any, after returning
+    while (  (add_prod+8 > add)  &&  ( ! (tempptr = Seek_Real_Producer ( add_prod  ) ) )   )  add_prod--;     // "tempptr" will point to the triebucket of the real producer, if any, after returning
     
-    if ( size_prod ) // a potential producer has been found, go for further check to see if "add" really falls in the range of the produced data
+    if ( tempptr ) // a potential producer has been found, go for further check to see if "add" really falls in the range of the produced data
     {
+        // some local variables to keep track of the real producer
+        UINT16 ID_prod=tempptr->last_producer;
+        UINT8 size_prod=tempptr->data_size;
+
         if ( ( add_prod + size_prod ) >= ( add + size ) ) // the current read access falls entirely in the range of the data object produced by ID_prod, record the binding
-                                return RecordBinding ( ID_prod, func, add, size );
+        // ******  note that although not all the bytes of data item has been read by the consumer function, we still opt to mark the consumption status flag as OLD, this can be changed if needed!
+                 return RecordBinding ( ID_prod, func, add, size, (tempptr->UnDV_flags->CheckAndClearFlag( func ))? true : false );  
                                 
-        if ( ( add_prod + size_prod ) > add  ) // the current read access falls partially in the range of the data object produced by ID_prod, record the binding for the first part, and then continue to the next phase to record the binding for the second part as UNKNOWN PRODUCER
+        if ( ( add_prod + size_prod ) > add  ) // the current read access falls partially in the range of the data object produced by ID_prod, record the binding for the first part, 
+        //   and then continue to the next phase to record the binding for the second part as UNKNOWN PRODUCER
         {
-            if ( RecordBinding ( ID_prod, func, add, add_prod + size_prod - add  ) != SUCCESS ) return BINDING_RECORD_FAIL;
+            if ( RecordBinding ( ID_prod, func, add, add_prod + size_prod - add, (tempptr->UnDV_flags->CheckAndClearFlag( func ))? true : false  ) != SUCCESS ) return BINDING_RECORD_FAIL;
             
             // adjust "add" and "size" for subsequent processing in the last phase of the MAT::ReadAccess, see *** important section below
             size=size - ( add_prod + size_prod - add );
             add=add_prod + size_prod;
         }
     }
+    
     // last phase of MAT::ReadAccess  (for unknown producer)
     // if we are here, then the "func" is trying to read from a memory which was not previously written to by any user defined function in the application (UNKOWN PRODUCER / CONSTANT DATA)
-    if ( RecordBinding ( 0, func, add, 1 ) != SUCCESS ) return BINDING_RECORD_FAIL;     // function ID# 0 is reserved for UNKOWN PRODUCER / CONSTANT DATA, Note that for just the current address we are sure that we are reading a value from unknown producer, thus the size is 1, for other addresses, if any, the check is repeated!
+    // ***** important notice: Because currently we do not create a trieBucket for the case of "UNKOWN PRODUCER / CONSTANT DATA", we cannot report of the freshness of data at the particular location for different consumers! Hence, we regard it as OLD in all the cases!
+    // ***** further extention can be for example to call WriteAccess to create a bucket for UNKOWN PRODUCER / CONSTANT DATA at that location
+    if ( RecordBinding ( 0, func, add, 1, false ) != SUCCESS ) return BINDING_RECORD_FAIL;     // function ID# 0 is reserved for UNKOWN PRODUCER / CONSTANT DATA, Note that for just the current address we are sure that we are reading a value from unknown producer, thus the size is 1, for other addresses, if any, the check is repeated!
     
     // **** important: (performance degradation) calling "ReadAccess" in the following is unnecessarily slow, there is no need to check again the previous addresses in case of "UNKNOWN PRODUCER" as these were checked before!!!
     // try to define a new function with the knowledge that most probably subsequent addresses would be intact as well.
@@ -380,22 +384,29 @@ MAT_ERR_TYPE  MAT::Nullify_Old_Producer ( ADDRINT add, int8_t size )
         UINT8  cur_data_sz= ( (trieBucket*) (currentLP->list[addressArray[currentLevel]]) )->data_size;   // make a copy of the size of the current data object
         size=size - cur_data_sz;     // size may go negative
         
-        if ( size<0 )   // The nullification does not hold for the whole size of the data object, issue a new (virtual) write access for the intact part of the data object to be added in the trie
+        if ( size<0 )  // The nullification does not hold for the whole size of the data object, issue a new (virtual) write access for the intact part of the data object to be added in the trie
+        {   
             // *****  be aware of the extra parameters needed to record a write access, such as PTS, PSN, etc.
             if ( WriteAccess ( ( (trieBucket*) (currentLP->list[addressArray[currentLevel]]) )->last_producer, 
                                          add+cur_data_sz+size, 
                                          -size ) != SUCCESS ) return MEM_ALLOC_FAIL;    // Adding the new record failed. inform the caller
+                                         
+            // copy the array of consumption status flags from the current address to the new record created in order to preserve the accuracy of UnDVs in the new place...                          
+            // note that if we are here it means that the new trieBucket has definitely been created in the previous call to WriteAccess!
+            if (  ( ((trieBucket*) (currentLP->list[addressArray[currentLevel]]) )->UnDV_flags->CopyStatusFlags( add+cur_data_sz+size , root, TrieDepth ) ) != SUCCESS  )
+                return MEM_ALLOC_FAIL;    //  reallocating the array of status flags failed for the new record failed. inform the caller
+        }
          
         //  delete the record for the nullified address(es) and release the allocated memory
         //  **** if trieBucket contains any link to dynamically allocated memory, it should be deallocated first
-        //  mp.Dealloc ( currentLP->list[addressArray[currentLevel]], sizeof(trieBucket) );
+        delete ( (trieBucket*) (currentLP->list[addressArray[currentLevel]]) )->UnDV_flags;     // the ConsumptionStatusFlags object was allocated with new, should be deallocated with delete
         free ( currentLP->list[addressArray[currentLevel]]  );
         currentLP->list[addressArray[currentLevel]]=NULL;
         
         return Nullify_Old_Producer ( add+cur_data_sz, size );     // proceed to the next entry in the trie for nullification, note that the "size" is already decremented for the whole "cur_data_sz" not just one byte
       }
     }
-    return Nullify_Old_Producer ( add+1, size-1 );     // current address is not written to until now, skip it and check the next address. viola, at least we are done checking for one byte!
+    return Nullify_Old_Producer ( add+1, size-1 );     // current address is not written to until now, skip it and check the next address. viola! at least we are done checking for one byte!
 }
 
 //==============================================================================
@@ -618,19 +629,26 @@ MAT_ERR_TYPE  MAT::WriteAccess ( UINT16 func, ADDRINT add, UINT8 size )
         	}
         	else	// the new size is less than the old size -> a new record has to be added to the trie to cover the intact portion of the previous entry
         	{
-                if( WriteAccess ( BucketAdd->last_producer, add+size, old_size-size  ) != SUCCESS ) // *** be aware of the extra data to be recorded with write access, such as PTS or PSN, as these should be retained with the same values for the original record (probably a separate write routine should be called) !!!
+                if( WriteAccess ( BucketAdd->last_producer, add+size, old_size-size  ) != SUCCESS ) 
+                // *** be aware of the extra data to be recorded with write access, such as PTS or PSN, as these should be retained with the same values for the original record
+                // probably the correction is carried out by a separate rountine of the class
                 {
                     cerr<<"\nMemory allocation failed during size correction. A record was supposed to be added to the trie due to incompatibility of the old and new data sizes ... \n";
                     return MEM_ALLOC_FAIL;  // Memory allocation failed
                 }
+                // copy the array of consumption status flags from the current address to the new record created in order to preserve the accuracy of UnDVs in the new place...                          
+                // note that if we are here it means that the new trieBucket has definitely been created in the previous call to WriteAccess!
+                return   BucketAdd->UnDV_flags->CopyStatusFlags( add+size , root, TrieDepth );
         	}
         	BucketAdd->data_size=size;	// update the old size in the bucket, producer update will be carried out later
-    	}
+        }
+    
         
         // if we are here either the current size of data matches the size of the new write access or we have already corrected the size of the entry 
         
         // **** you may want to check if this is the same producer skip the assignment! performance gain?! check ...
         BucketAdd->last_producer = func;  // update the last producer
+        BucketAdd->UnDV_flags->ResetAllFlags( );  // Reset all the consumption flags, as a FRESH value is written to this memory location
         
         // **** more updates are needed for extra data (PTS, PSN, etc.)
     }   // end of the trie bucket already exists
