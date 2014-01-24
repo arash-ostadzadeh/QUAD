@@ -1,11 +1,11 @@
 /*
 QUAD v2.0
-final revision October 9th, 2013
+final revision January 24th, 2014
 
 This file is part of QUAD Toolset available @:
 http://sourceforge.net/projects/quadtoolset
 
-Copyright © 2008-2013 Arash Ostadzadeh (ostadzadeh@gmail.com)
+Copyright © 2008-2014 Arash Ostadzadeh (ostadzadeh@gmail.com)
 http://www.linkedin.com/in/ostadzadeh
 
 
@@ -55,7 +55,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
  * This file is part of QUAD.
  *
  *  Author: Arash Ostadzadeh
- *  Lastly revised on 9-10-2013
+ *  Lastly revised on 24-1-2014
 */
 //==============================================================================
 
@@ -74,12 +74,12 @@ THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 
-void Put_Binding_in_XML_file(string producer,string consumer,UINT64 bytes,UINT64 unma);
-void Update_total_statistics(string producer,string consumer,UINT64 bytes,UINT64 unma,bool p_f,bool c_f);
+void Put_Binding_in_XML_file(string producer,string consumer,UINT64 bytes,UINT64 UnMA, UINT64 UnDV);
+void Update_total_statistics(string producer,string consumer,UINT64 bytes,UINT64 UnMA,bool p_f,bool c_f);
 int CreateTotalStatFile();
 int IsNewFunc(UINT16 funcID);
 void recTrieTraverse(struct trieNode* current,int level);
 int CreateDSGraphFile();
-MAT_ERR_TYPE  RecordBinding(UINT16 producer, UINT16 consumer, ADDRINT add, UINT8 size);
+MAT_ERR_TYPE  RecordBinding(UINT16 producer, UINT16 consumer, ADDRINT add, UINT8 size, bool fresh);
 
 #endif //__TRACING__H__

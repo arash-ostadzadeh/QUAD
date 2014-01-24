@@ -1,11 +1,11 @@
 /*
 QUAD v2.0
-final revision December 6th, 2013
+final revision January 24th, 2014
 
 This file is part of QUAD Toolset available @:
 http://sourceforge.net/projects/quadtoolset
 
-Copyright © 2008-2013 Arash Ostadzadeh (ostadzadeh@gmail.com)
+Copyright © 2008-2014 Arash Ostadzadeh (ostadzadeh@gmail.com)
 http://www.linkedin.com/in/ostadzadeh
 
 This file is part of QUAD toolset.
@@ -57,7 +57,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
  * This file is part of QUAD.
  *
  *  Author: Arash Ostadzadeh
- *  Lastly revised on 6-12-2013
+ *  Lastly revised on 24-1-2014
 */
 //==============================================================================
 
@@ -77,39 +77,39 @@ UINT64 MaxLabel=0;
 struct trieNode *graphRoot=NULL,*uflist=NULL;
 
 
-
-
 //==============================================================================
-void Put_Binding_in_XML_file(string producer,string consumer,UINT64 bytes,UINT64 unma)
+void Put_Binding_in_XML_file(string producer, string consumer, UINT64 bytes, UINT64 UnMA, UINT64 UnDV)
 {
   if (First_Rec_in_XML)  // check to make sure <PROFILE> exists and create the <QUAD> element...
   {	  
-  	First_Rec_in_XML = false;
+        First_Rec_in_XML = false;
   	
-	TiXmlElement* root = xmldoc.RootElement();
-	if (!root) 
+        TiXmlElement* root = xmldoc.RootElement();
+        if (!root) 
 	  {
 		   cerr<<"Error writing <BINDING> elements in XML file...\n";
 		   return;
 	  }
   	
-    TiXmlNode* Profile_element=root->FirstChildElement( "PROFILE" );
-    if (!Profile_element)
-    {
-    	TiXmlElement profile_tag("PROFILE");
-    	Profile_element=root->InsertEndChild(profile_tag);
-    }
+        TiXmlNode* Profile_element=root->FirstChildElement( "PROFILE" );
+        if (!Profile_element)
+        {
+    	    TiXmlElement profile_tag("PROFILE");
+    	    Profile_element=root->InsertEndChild(profile_tag);
+        }
 
-    TiXmlElement QUAD_tag("QUAD");
-    Put_QUAD_here=Profile_element->InsertEndChild(QUAD_tag);
+        TiXmlElement QUAD_tag("QUAD");
+        Put_QUAD_here=Profile_element->InsertEndChild(QUAD_tag);
   }
 
-  char buffer1 [20],buffer2[20];
+  char buffer1[20], buffer2[20], buffer3[20];
   sprintf(buffer1,"%" PRIu64 "", bytes);
-  sprintf(buffer2,"%" PRIu64 "", unma);
+  sprintf(buffer2,"%" PRIu64 "", UnMA);
+  sprintf(buffer3,"%" PRIu64 "", UnDV);
+  
   	  
-  TiXmlElement BINDING_tag("BINDING"),PRODUCER_tag("PRODUCER"),CONSUMER_tag("CONSUMER"),DATA_TRANSFER_tag("DATA_TRANSFER"),UnMA_tag("UnMA");
-  TiXmlText pro_text(producer),con_text(consumer),data_transfer_text(buffer1),uma_text(buffer2);
+  TiXmlElement BINDING_tag("BINDING"),PRODUCER_tag("PRODUCER"),CONSUMER_tag("CONSUMER"),DATA_TRANSFER_tag("DATA_TRANSFER"),UnMA_tag("UnMA"),UnDV_tag("UnDV");
+  TiXmlText pro_text(producer),con_text(consumer),data_transfer_text(buffer1),unma_text(buffer2),undv_text(buffer3);
 
   TiXmlNode* Current_binding; 
   
@@ -117,35 +117,36 @@ void Put_Binding_in_XML_file(string producer,string consumer,UINT64 bytes,UINT64
   (Current_binding->InsertEndChild(PRODUCER_tag))->InsertEndChild(pro_text);
   (Current_binding->InsertEndChild(CONSUMER_tag))->InsertEndChild(con_text);
   (Current_binding->InsertEndChild(DATA_TRANSFER_tag))->InsertEndChild(data_transfer_text);
-  (Current_binding->InsertEndChild(UnMA_tag))->InsertEndChild(uma_text);
+  (Current_binding->InsertEndChild(UnMA_tag))->InsertEndChild(unma_text);
+  (Current_binding->InsertEndChild(UnDV_tag))->InsertEndChild(undv_text);
   
   if (xmldoc.Error())	
   	cerr << xmldoc.ErrorDesc() << endl ;
 }
 
 //==============================================================================
-void Update_total_statistics(string producer,string consumer,UINT64 bytes,UINT64 unma,bool p_f,bool c_f)
+void Update_total_statistics(string producer,string consumer,UINT64 bytes,UINT64 UnMA,bool p_f,bool c_f)
 {
 	if(p_f)
 	{
 		ML_OUTPUT[producer]->total_OUT_ALL+=bytes;
-		ML_OUTPUT[producer]->total_OUT_ALL_UnMA+=unma;	
+		ML_OUTPUT[producer]->total_OUT_ALL_UnMA+=UnMA;	
 		ML_OUTPUT[producer]->consumers.push_back(consumer);	 // update the list of consumers for the particular producer in the ML
 	}
 	
 	if(c_f)
 	{
 		ML_OUTPUT[consumer]->total_IN_ALL+=bytes;
-		ML_OUTPUT[consumer]->total_IN_ALL_UnMA+=unma;
+		ML_OUTPUT[consumer]->total_IN_ALL_UnMA+=UnMA;
 		ML_OUTPUT[consumer]->producers.push_back(producer);	 // update the list of producers for the particular consumer in the ML
 	}
 	
 	if(p_f && c_f)
 	{
 		ML_OUTPUT[producer]->total_OUT_ML+=bytes;
-		ML_OUTPUT[producer]->total_OUT_ML_UnMA+=unma;
+		ML_OUTPUT[producer]->total_OUT_ML_UnMA+=UnMA;
 		ML_OUTPUT[consumer]->total_IN_ML+=bytes;
-		ML_OUTPUT[consumer]->total_IN_ML_UnMA+=unma;
+		ML_OUTPUT[consumer]->total_IN_ML_UnMA+=UnMA;
 	}
 }
 
@@ -310,34 +311,45 @@ void recTrieTraverse(struct trieNode* current,int level)
 		   temp=(Binding*)(current->list[i]);
 		   if (temp) 
 		   {
-                	string name2,name3;
-                	int color;
-                	name2 = ADDtoName[temp->producer];
-			name3 = ADDtoName[temp->consumer];
-			
-			// If monitor list is specified, lets see we like the current functions' names or not!!
-			// if we do not like the names skip to the next binding!
+                	        string name2,name3;
+                	        int color;
+                	        name2 = ADDtoName[temp->producer];
+		        name3 = ADDtoName[temp->consumer];
+		
+		        // If monitor list is specified, lets see we like the current functions' names or not!!
+		        // if we do not like the names skip to the next binding!
 			
 			if (Monitor_ON)
 			{
-				producer_in_ML = ( ML_OUTPUT.find(name2) != ML_OUTPUT.end() );
-				consumer_in_ML = ( ML_OUTPUT.find(name3) != ML_OUTPUT.end() );
-				
-				if( ! (producer_in_ML || consumer_in_ML) ) break;
-				
+			    producer_in_ML = ( ML_OUTPUT.find(name2) != ML_OUTPUT.end() );
+			    consumer_in_ML = ( ML_OUTPUT.find(name3) != ML_OUTPUT.end() );
+			    if( ! (producer_in_ML || consumer_in_ML) ) break;
 			}	
-			if(IsNewFunc( temp->producer ) )
-                	{
-				fprintf(gfp,"\"%08x\" [label=\"%s\"];\n", (unsigned int)temp->producer , name2.c_str());
-                	}
-			if(IsNewFunc( temp->consumer ) )
-                	{
-				fprintf(gfp,"\"%08x\" [label=\"%s\"];\n", (unsigned int)temp->consumer , name3.c_str());
+
+			if( IsNewFunc( temp->producer ) )
+                	         {
+			    fprintf(gfp,"\"%08x\" [label=\"%s\"];\n", (unsigned int)temp->producer , name2.c_str());
+                	         }
+
+			if( IsNewFunc( temp->consumer ) )
+                	         {
+			    fprintf(gfp,"\"%08x\" [label=\"%s\"];\n", (unsigned int)temp->consumer , name3.c_str());
                		}
+
 			color = (int) (  1023 *  log((double)(temp->bytes)) / log((double)MaxLabel)  ); 
-			fprintf(gfp,"\"%08x\" -> \"%08x\"  [label=\" %" PRIu64 " bytes (%" PRIu64 " UnMA)\" color=\"#%02x%02x%02x\"]\n",(unsigned int)temp->producer,(unsigned int)temp->consumer,temp->bytes, (UINT64) ( temp->UnMA->size() ), max(0,color-768),min(255,512-abs(color-512)), max(0,min(255,512-color)));
+			fprintf( gfp,
+                                    "\"%08x\" -> \"%08x\"  [label=\" %" PRIu64 " bytes \n %" PRIu64 " UnMA \n %" PRIu64 " UnDV \" color=\"#%02x%02x%02x\"]\n",
+                                    (unsigned int) temp->producer,
+                                    (unsigned int) temp->consumer,
+                                    temp->bytes, 
+                                    (UINT64) ( temp->UnMA->size() ),
+                                    temp->UnDV,
+                                    max(0,color-768),
+                                    min(255,512-abs(color-512)),
+                                    max(0,min(255,512-color)) 
+                                    );
 			
-			Put_Binding_in_XML_file(name2,name3,temp->bytes,(UINT64) temp->UnMA->size());
+			Put_Binding_in_XML_file(name2, name3, temp->bytes, (UINT64) temp->UnMA->size(), temp->UnDV );
 			
 			if (Monitor_ON)  // do we need the total statistics file always or not? ... should be modified if we need this in any case... do not forget to make also the relevant modifications in the monitor list input file processing ... this can also be moved up in the previous condition if we need output file only when monitor list is specified!
 			
@@ -395,7 +407,7 @@ int CreateDSGraphFile()
 }                                               
 
 //==============================================================================
-MAT_ERR_TYPE  RecordBinding(UINT16 producer, UINT16 consumer, ADDRINT add, UINT8 size)
+MAT_ERR_TYPE  RecordBinding(UINT16 producer, UINT16 consumer, ADDRINT add, UINT8 size, bool fresh)
 {
     UINT8  currentLevel=0;
     Binding* tempptr;
@@ -442,36 +454,41 @@ MAT_ERR_TYPE  RecordBinding(UINT16 producer, UINT16 consumer, ADDRINT add, UINT8
     }            
     
     
-    if( currentLP->list[addressArray[currentLevel]] == NULL ) /* create new bucket to store number of accesses between the two functions*/
+    if( currentLP->list[addressArray[currentLevel]] == NULL ) // create a new bucket to store binding information between the two functions
     {
         if(!(  currentLP->list[addressArray[currentLevel]] = (trieNode *)malloc(sizeof(Binding)) ) ) return BINDING_RECORD_FAIL; /* memory allocation failed*/
         else 
         {
             tempptr=(Binding*) ( currentLP->list[addressArray[currentLevel]] );
 
-			tempptr->bytes=0;  /* set number of times to zero */
-			tempptr->producer=producer;
-			tempptr->consumer=consumer;
-                           //  tempptr->DCC_file_ptr_idx=0;     // the DCC is not monitored for now!! ****
-			tempptr->UnMA=new unordered_set<ADDRINT>;
-			if (!tempptr->UnMA) return BINDING_RECORD_FAIL; /* memory allocation failed*/
+	    tempptr->bytes=0;
+             tempptr->UnDV=0;
+	    tempptr->producer=producer;
+	    tempptr->consumer=consumer;
+             //  tempptr->DCC_file_ptr_idx=0;     // the DCC is not monitored for now!! ****
+             
+	    tempptr->UnMA=new unordered_set<ADDRINT>;
+	    if (!tempptr->UnMA) return BINDING_RECORD_FAIL; /* memory allocation failed*/
     	}	
     }
 	
-	tempptr=(Binding*) ( currentLP->list[addressArray[currentLevel]] );
-	tempptr->bytes=tempptr->bytes+size;
-	if (tempptr->bytes > MaxLabel) MaxLabel=tempptr->bytes; // only needed for graph visualization coloring!
-	for ( i=0;i<size;i++) tempptr->UnMA->insert(add+i); // all the memroy addresses corresponding to the read size should be checked to have an accurate UnMA
-	//****   what to do if insertion is not successful, memory problems!!!!!!!!!!!!
+    tempptr=(Binding*) ( currentLP->list[addressArray[currentLevel]] );
+    
+    tempptr->bytes=tempptr->bytes+size;
+    if ( fresh ) tempptr->UnDV=tempptr->UnDV+size;  // if the value read by the consumer is a fresh one (not previously read) adjust the UnDV field correspondingly
 
-          //================================Call Path==================================================================
-          // check the CP_TRACK_ON_flag status to decide whether or not we need to track access data for individual functions
-          if ( CP.CallPathTrackOn( ) ) 
-              if ( ! CP.RecordRead( ADDtoName[producer], add, size ) )  
-              {
-                cerr<<"\nFailed to record a memory read access in the call path stack! \n";
-                exit(1);
-              }
+    if (tempptr->bytes > MaxLabel) MaxLabel=tempptr->bytes; // only needed for graph visualization coloring!
+    for ( i=0;i<size;i++) tempptr->UnMA->insert(add+i); // all the memroy addresses corresponding to the read size should be checked to have an accurate UnMA
+	//****   check for memory problems during insertion!!!!!!!!!!!!
+
+    //================================Call Path==================================================================
+    // check the CP_TRACK_ON_flag status to decide whether or not we need to track access data for individual functions
+    if ( CP.CallPathTrackOn( ) ) 
+           if ( ! CP.RecordRead( ADDtoName[producer], add, size ) )  
+           {
+               cerr<<"\nFailed to record a memory read access in the call path stack! \n";
+               exit(1);
+            }
 	
     return SUCCESS; /* successful recording */
 }
