@@ -89,6 +89,8 @@ using std::tr1::unordered_set;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+class ConsumptionStatusFlags;   // forward declaration
+
 // Errors encountered using functions related to MAT
 typedef enum {
          SUCCESS,
@@ -234,8 +236,10 @@ class ConsumptionStatusFlags
                 
                  for ( ; i<size ; i++ ) 
                     if ( flags_array[i].consID==consumer )      // the consumer is already in the list
+                    {
                         if ( flags_array[i].flag==OLD ) return OLD;
                         else { flags_array[i].flag=OLD; return FRESH; }
+                    }
                  
                  // the consumer is a new consumer (the first time seen)
                  

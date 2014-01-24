@@ -338,7 +338,7 @@ void recTrieTraverse(struct trieNode* current,int level)
 
 			color = (int) (  1023 *  log((double)(temp->bytes)) / log((double)MaxLabel)  ); 
 			fprintf( gfp,
-                                    "\"%08x\" -> \"%08x\"  [label=\" %" PRIu64 " bytes \n %" PRIu64 " UnMA \n %" PRIu64 " UnDV \" color=\"#%02x%02x%02x\"]\n",
+                                    "\"%08x\" -> \"%08x\"  [label=\" %" PRIu64 " bytes \\n %" PRIu64 " UnMA \\n %" PRIu64 " UnDV \" color=\"#%02x%02x%02x\"]\n",
                                     (unsigned int) temp->producer,
                                     (unsigned int) temp->consumer,
                                     temp->bytes, 

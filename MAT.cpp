@@ -491,7 +491,7 @@ MAT_ERR_TYPE  MAT::Check_Prev_7_Addresses ( ADDRINT add, int8_t size )  // *****
                                          
                 // copy the array of consumption status flags from the checked address to the new record created in order to preserve the accuracy of UnDVs in the new place...                          
                 // note that if we are here it means that the new trieBucket has definitely been created in the previous call to WriteAccess!
-                return   (  ((trieBucket*) (currentLP->list[addressArray[currentLevel]]) )->UnDV_flags->CopyStatusFlags( add+size , root, TrieDepth )  )
+                return   (  ((trieBucket*) (currentLP->list[addressArray[currentLevel]]) )->UnDV_flags->CopyStatusFlags( add+size , root, TrieDepth )  );
             }
             
             //  the last possibility -> the last effective address belonging to the write access at "check_add" lands somewhere in the range of the current write access, just correct the corresponding "size" field
