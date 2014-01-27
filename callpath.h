@@ -5,7 +5,7 @@ final revision December 6th, 2013
 This file is part of QUAD Toolset available @:
 http://sourceforge.net/projects/quadtoolset
 
-Copyright © 2008-2013 Arash Ostadzadeh (ostadzadeh@gmail.com)
+Copyright © 2008-2014 Arash Ostadzadeh (ostadzadeh@gmail.com)
 http://www.linkedin.com/in/ostadzadeh
 
 
@@ -101,8 +101,8 @@ class CallPath
         } CallPathStackElem;    // to keep the summary of memory access statistics for each function call
 
     public:
-        CallPath( );
-        bool CallPathTrackOn( ) { return CP_TRACK_ON_flag; }
+        CallPath( )  {  CP_TRACK_ON_flag=false;  }
+        bool CallPathTrackOn( ) {  return CP_TRACK_ON_flag;  }
         void BuildFuncList( string fname );     // put the function names listed in the input text file into the "callcounter" map container
         void FuncEnter( string func );      // a function is called in the application, check and update the internal data if necessary
         void FuncReturn( string func );      // a called function returns control to the caller, check and update the internal data

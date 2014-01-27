@@ -6,7 +6,7 @@ final revision December 6th, 2013
 This file is part of QUAD Toolset available @:
 http://sourceforge.net/projects/quadtoolset
 
-Copyright © 2008-2013 Arash Ostadzadeh (ostadzadeh@gmail.com)
+Copyright © 2008-2014 Arash Ostadzadeh (ostadzadeh@gmail.com)
 http://www.linkedin.com/in/ostadzadeh
 
 
@@ -61,22 +61,16 @@ THE POSSIBILITY OF SUCH DAMAGE.
 //==============================================================================
 #include "callpath.h"
 //======================CallPath function definitions===================================
-CallPath::CallPath( )
-{
-    CP_TRACK_ON_flag=false;
 
-    cpf.open("callpath.txt");
-     if (!cpf)
-     {
-	  cerr<<"\nCannot create the call path summary file (\"callpath.txt\")... Aborting!\n";
-	  exit(1);
-     }
-
-}
-
-//==============================================================================
 void CallPath::BuildFuncList( string fname)
 {
+        cpf.open("callpath.txt");
+        if (!cpf)
+        {
+	  cerr<<"\nCannot create the call path summary file (\"callpath.txt\")... Aborting!\n";
+	  exit(1);
+        }
+
 	ifstream ilistf;
 	ilistf.open(fname.c_str());
          if (!ilistf)
@@ -222,6 +216,6 @@ bool CallPath::RecordRead( string producer, ADDRINT addr, UINT8 size )
 //==============================================================================
 void CallPath::FlushOutput( ) 
 { 
-    cpf.close(); 
+    if (cpf)  cpf.close(); 
 }
 //==============================================================================
