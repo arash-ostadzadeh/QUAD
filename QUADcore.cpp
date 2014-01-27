@@ -6,7 +6,7 @@ final revision December 6th, 2013
 This file is part of QUAD Toolset available @:
 http://sourceforge.net/projects/quadtoolset
 
-Copyright © 2008-2013 Arash Ostadzadeh (ostadzadeh@gmail.com)
+Copyright © 2008-2014 Arash Ostadzadeh (ostadzadeh@gmail.com)
 http://www.linkedin.com/in/ostadzadeh
 
 
