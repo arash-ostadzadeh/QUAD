@@ -12,7 +12,7 @@ To use the complete QUAD toolset refer to the 'QUAD' project on sourceforge.
 QUAD Toolset is available @
 http://sourceforge.net/projects/quadtoolset
 
-Copyright © 2008-2013 Arash Ostadzadeh 
+Copyright © 2008-2014 Arash Ostadzadeh 
 http://www.linkedin.com/in/ostadzadeh
 
 
@@ -136,7 +136,7 @@ No silence! Prints the number of instructions executed so far. It can be interpr
 Output Files
 ============
 
-* After instrumenting the application, all the producer/consumer bindings data is stored in an XML file named 'dek_arch.xml' in the current directory by default (previous <QUAD> elements in the xml file are removed if any).
+* After instrumenting the application, all the producer/consumer bindings information is stored in an XML file named 'dek_arch.xml' in the current directory by default (previous <QUAD> elements in the xml file are removed if any).
 
 The elements that are written in the XML file are stored under the root element, <ORGANIZATION>, in the following form:
 
@@ -151,12 +151,14 @@ The elements that are written in the XML file are stored under the root element,
                 <CONSUMER>x264_ratecontrol_new</CONSUMER>
                 <DATA_TRANSFER>72</DATA_TRANSFER>
                 <UnMA>72</UnMA>
+                <UnDV>24</UnDV>
             </BINDING>
             <BINDING>
                 <PRODUCER>x264_validate_parameters</PRODUCER>
                 <CONSUMER>x264_macroblock_cache_load</CONSUMER>
                 <DATA_TRANSFER>28800</DATA_TRANSFER>
                 <UnMA>464</UnMA>
+                <UnDV>28800</UnDV>
             </BINDING>
              .
              .
@@ -240,12 +242,17 @@ The name of the function who is responsible for reading from that memory locatio
 ```
 DATA_TRANSFER
 ```
-The total amount of data being read in this fashion (note that if the same memory location is read 100 times, it is regarded as 100 bytes binding).
+The total amount of data (in bytes) being read in a binding. Note that if an identical memory address is read 100 times (regardless of that memory address being repeatedly written to by the producer), it is assumed as 100-bytes data transfer between the producer and consumer in the binding.
 
 ```
 UnMA
 ```
-This value shows the number of unique memory addresses used for this transfer, it could be regarded as the actual size of memory buffer needed for the data transfer.
+This value indicates the number of Unique Memory Addresses (UnMA) used for data transfer in a binding. It could be regarded as the actual size of memory buffer needed for the transfer of data between the producer and consumer.
+
+```
+UnDV
+```
+UnDV indicates the number of Unique Data Values, in bytes, that is transferred in a binding. In other words, only freshly written bytes read by a particular consumer for the very first time are accounted for in UnDV. All subsequent read accesses other than the initial access are considered as reading an old (already read) data and are ignored until a new write access is issued for that memory address, which in turn resets the status of the data as fresh. This can be useful if a user wants to know whether or not a consumer is reading the same value repeatedly without data being updated by a producer.
 
 
 Output Visualization
