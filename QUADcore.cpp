@@ -1,7 +1,7 @@
 /*
 
 QUAD v2.0
-final revision December 6th, 2013
+final revision March 11th, 2014
 
 This file is part of QUAD Toolset available @:
 http://sourceforge.net/projects/quadtoolset
@@ -56,7 +56,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
  * This file is part of QUAD.
  *
  *  Author: Arash Ostadzadeh
- *  Lastly revised on 6-12-2013
+ *  Lastly revised on 11-3-2014
 */
 //==============================================================================
 
@@ -134,8 +134,8 @@ THE POSSIBILITY OF SUCH DAMAGE.
    set<string> SeenFname;
    UINT16 GlobalfunctionNo=0x1;
 
-   UINT64 Total_Ins=0;  // just for counting the total number of executed instructions
-   UINT32 Total_M_Ins=0; // total number of instructions but divided by a million
+   UINT32 Total_Interim_Ins=0;  // for counting the total number of executed instructions in the range of 1 billion (10^9), this counter is reset after each G instrumentions
+   UINT32 Total_G_Ins=0; // total number of G (10^9) instructions executed so far
    
    BOOL Monitor_ON = FALSE;
    BOOL CallPath_ON = FALSE;    // by default set the call path monitoring flag to false
@@ -396,10 +396,6 @@ static VOID RecordMem(VOID * ip, CHAR r, VOID * addr, INT32 size, BOOL isPrefetc
             		ADDtoName[GlobalfunctionNo]=temp;   // create the Number -> String binding
 		} 
 
-//           for(int i=0;i<size;i++)
-//	    {
-//		RecordMemoryAccess((ADDRINT)addr,NametoADD[temp],r=='W');
-//		addr=((char *)addr)+1;  // cast not needed anyway!
 
             if (r=='W')     // record memory write access
             {
@@ -422,18 +418,18 @@ static VOID RecordMem(VOID * ip, CHAR r, VOID * addr, INT32 size, BOOL isPrefetc
                             	cerr<<"\nFailed to record a memory read access in the MAT module! \n";
                     
 	   
-	    if (Verbose_ON && Total_Ins>999999)
+	    if (Verbose_ON && Total_Interim_Ins>999999999)
 	    {
-	      Total_M_Ins++;
-	      cout<<(char)(13)<<"                                                                   ";
-	      cout<<(char)(13)<<"Instructions executed so far = "<<Total_M_Ins<<" M";
-	      Total_Ins=0;
+	      Total_G_Ins++;
+	      // cout<<(char)(13)<<"                                                                   ";
+	      cerr<<"\n < Message from QUAD > Instructions executed so far = "<<Total_G_Ins<<" Giga";
+               cerr<<"\n < Message from QUAD > Making an interim dump of the QDU graph\n";
+               
+               InterimCreateDSGraphFile();
+	      Total_Interim_Ins=0;
 	    }
-	    
-	    //<<"   "<<temp<<"  "<<( (r!='w')? "READ access  " : "WRITE access  ")<<"Memory Location# "<<addr;
-//        }
        
-       }// end of not a prefetch
+       } // end of not a prefetch
 
 }
 
@@ -479,17 +475,17 @@ static VOID RecordMemSP(VOID * ip, VOID * ESP, CHAR r, VOID * addr, INT32 size, 
                             	cerr<<"\nFailed to record a memory read access in the MAT module! \n";
 
 
-	    if (Verbose_ON && Total_Ins>999999)
+	    if (Verbose_ON && Total_Interim_Ins>999999999)
 	    {
-	      Total_M_Ins++;
-	      cout<<(char)(13)<<"                                                                   ";
-	      cout<<(char)(13)<<"Instructions executed so far = "<<Total_M_Ins<<" M";
-	      Total_Ins=0;
+	      Total_G_Ins++;
+	      // cout<<(char)(13)<<"                                                                   ";
+	      cerr<<"\n < Message from QUAD > Instructions executed so far = "<<Total_G_Ins<<" Giga";
+               cerr<<"\n < Message from QUAD > Making an interim dump of the QDU graph\n";
+               
+               InterimCreateDSGraphFile();
+	      Total_Interim_Ins=0;
 	    }
 	    
-	    //<<"   "<<temp<<"  "<<( (r!='w')? "READ access  " : "WRITE access  ")<<"Memory Location# "<<addr;
-//        }
-
        }// end of not a prefetch
 
 }
@@ -498,7 +494,10 @@ static VOID RecordMemSP(VOID * ip, VOID * ESP, CHAR r, VOID * addr, INT32 size, 
 // increment routine for the total instruction counter
 VOID IncreaseTotalInstCounter()
 {
-	Total_Ins++;
+	// Total_Ins++;
+         
+         Total_Interim_Ins++;
+         
 }
 
 /* ===================================================================== */
@@ -506,14 +505,14 @@ VOID IncreaseTotalInstCounter()
 VOID Instruction(INS ins, VOID *v)
 {
 	
-	INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)IncreaseTotalInstCounter, IARG_END);
+  INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)IncreaseTotalInstCounter, IARG_END);
 	
-     if (INS_IsRet(ins))  // we are monitoring the 'ret' instructions since we need to know when we are leaving functions in order to update our own virtual 'Call Stack'. The mechanism to inject instrumentation code to update the Call Stack (pop) upon leave is not implemented directly contrary to the dive in mechanism. Could be a point for further improvement?! ...
-     {
+  if (INS_IsRet(ins))  // we are monitoring the 'ret' instructions since we need to know when we are leaving functions in order to update our own virtual 'Call Stack'. The mechanism to inject instrumentation code to update the Call Stack (pop) upon leave is not implemented directly contrary to the dive in mechanism. Could be a point for further improvement?! ...
+  {
         INS_InsertPredicatedCall(ins, IPOINT_BEFORE, (AFUNPTR)Return, IARG_INST_PTR, IARG_END);
-     }
+  }
   
- if (!No_Stack_Flag)
+  if (!No_Stack_Flag)
   {
      if (INS_IsMemoryRead(ins) || INS_IsStackRead(ins) )
      {
@@ -552,7 +551,7 @@ VOID Instruction(INS ins, VOID *v)
       }
     } // end of Stack is ok!
  
- else  // ignore stack access
+  else  // ignore stack access
   {
      if (INS_IsMemoryRead(ins) )
      {

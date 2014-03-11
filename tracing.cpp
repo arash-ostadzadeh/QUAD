@@ -1,6 +1,6 @@
 /*
 QUAD v2.0
-final revision January 24th, 2014
+final revision March 11th, 2014
 
 This file is part of QUAD Toolset available @:
 http://sourceforge.net/projects/quadtoolset
@@ -57,7 +57,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
  * This file is part of QUAD.
  *
  *  Author: Arash Ostadzadeh
- *  Lastly revised on 24-1-2014
+ *  Lastly revised on 11-3-2014
 */
 //==============================================================================
 
@@ -76,6 +76,11 @@ UINT64 MaxLabel=0;
 
 struct trieNode *graphRoot=NULL,*uflist=NULL;
 
+
+
+////////////////////   the following variables are added for a temporary implementation of interim QDUG dump and can be discarded in the final version!
+struct trieNode *graphRoot_int,*uflist_int=NULL;
+    
 
 //==============================================================================
 void Put_Binding_in_XML_file(string producer, string consumer, UINT64 bytes, UINT64 UnMA, UINT64 UnDV)
@@ -372,6 +377,7 @@ void recTrieTraverse(struct trieNode* current,int level)
 }
 		  
 //==============================================================================
+
 int CreateDSGraphFile()
 {
    int i;
@@ -405,6 +411,174 @@ int CreateDSGraphFile()
    fclose(gfp);	
    return 0;
 }                                               
+
+//==============================================================================
+//==============================================================================
+//====   These is temporary implementation: to be removed in the final QUAD v2.0 release            ========
+//==============================================================================
+//==============================================================================
+
+int InterimIsNewFunc(UINT16 funcID)
+{
+    int currentLevel=0;
+    int i;
+    struct trieNode* currentLP;
+    AddressSplitter* ASP= (AddressSplitter *)&funcID;
+    
+    unsigned int addressArray[4];
+    
+    addressArray[0]=ASP->h3;
+    addressArray[1]=ASP->h2;
+    addressArray[2]=ASP->h1;
+    addressArray[3]=ASP->h0;
+    
+    currentLP=uflist_int;                
+    while(currentLevel<3)  /* proceed to the last level */
+    {
+        if(! (currentLP->list[addressArray[currentLevel]]) ) /* create new level on demand */
+        {
+                if(!(currentLP->list[addressArray[currentLevel]]=(struct trieNode*)malloc(sizeof(struct trieNode))) ) 
+        		{
+        			fprintf(stderr,"Memory allocation failed in \'InterimIsNewFunc()\'...");
+        			return 2; /* memory allocation failed*/
+        		}
+                else
+                       for (i=0;i<16;i++) 
+                              (currentLP->list[addressArray[currentLevel]])->list[i]=NULL;
+        }
+        
+        currentLP=currentLP->list[addressArray[currentLevel]];
+        currentLevel++;
+    }            
+    
+    if( !currentLP->list[addressArray[currentLevel]] )
+    {
+    	currentLP->list[addressArray[currentLevel]] = currentLP; /* a dummy value to show the cell has been filled before!! */
+    	return 1; /* this function address is new */
+    }
+    	
+    return 0; /* function address exists in the list */
+}
+
+void InterimRecResetUFlist(struct trieNode* current,int level)
+{
+    int i;
+
+    if (level==3)   // we reached the last level of the trie, time to check the values!
+    {   
+	for (i=0; i<16; i++)
+	  if (current->list[i]) current->list[i]=NULL; 
+	
+	return;
+    } 
+    
+    for (i=0;i<16;i++)   // we have not reached the last level of trie, we are in the middle somewhere! DO spawn further searches deep in the trie, covering everywhere!
+    	  if (current->list[i]) 
+	    InterimRecResetUFlist(current->list[i],level+1);
+}
+
+
+void InterimRecTrieTraverse(struct trieNode* current,int level)
+{
+    int i;
+	if (level==7)
+	{   
+		Binding *temp;
+		bool producer_in_ML=false,consumer_in_ML=false;
+		for (i=0; i<16; i++)
+		{
+		   temp=(Binding*)(current->list[i]);
+		   if (temp) 
+		   {
+                	        string name2,name3;
+                	        int color;
+                	        name2 = ADDtoName[temp->producer];
+		        name3 = ADDtoName[temp->consumer];
+		
+		        // If monitor list is specified, lets see we like the current functions' names or not!!
+		        // if we do not like the names skip to the next binding!
+			
+			if (Monitor_ON)
+			{
+			    producer_in_ML = ( ML_OUTPUT.find(name2) != ML_OUTPUT.end() );
+			    consumer_in_ML = ( ML_OUTPUT.find(name3) != ML_OUTPUT.end() );
+			    if( ! (producer_in_ML || consumer_in_ML) ) break;
+			}	
+
+			if( InterimIsNewFunc( temp->producer ) )
+                	         {
+			    fprintf(gfp,"\"%08x\" [label=\"%s\"];\n", (unsigned int)temp->producer , name2.c_str());
+                	         }
+
+			if( InterimIsNewFunc( temp->consumer ) )
+                	         {
+			    fprintf(gfp,"\"%08x\" [label=\"%s\"];\n", (unsigned int)temp->consumer , name3.c_str());
+               		}
+
+			color = (int) (  1023 *  log((double)(temp->bytes)) / log((double)MaxLabel)  ); 
+			fprintf( gfp,
+                                    "\"%08x\" -> \"%08x\"  [label=\" %" PRIu64 " Bytes \\n %" PRIu64 " UnMAs \\n %" PRIu64 " UnDVs \" color=\"#%02x%02x%02x\"]\n",
+                                    (unsigned int) temp->producer,
+                                    (unsigned int) temp->consumer,
+                                    temp->bytes, 
+                                    (UINT64) ( temp->UnMA->size() ),
+                                    temp->UnDV,
+                                    max(0,color-768),
+                                    min(255,512-abs(color-512)),
+                                    max(0,min(255,512-color)) 
+                                    );
+		   
+		   } // end of this item in the last level of the trie has a binding we need to check!   
+		} // end of for which goes thru all the items in the last level of the trie...
+	 return;
+	} // end of if ...(we reached the last level of the trie, time to check binding items!)
+  
+	for (i=0;i<16;i++)   // we have not reached the last level of trie, we are in the middle somewhere! DO spawn further searches deep in the trie, covering everywhere!
+    	  if (current->list[i]) 
+	    InterimRecTrieTraverse(current->list[i],level+1);
+
+  return;
+}
+
+int InterimCreateDSGraphFile()
+{
+   int i;
+    
+   char fname[20]="QDUG";
+   char tmp[15];
+   sprintf (tmp, "%lu%s", (unsigned long int) Total_G_Ins, ".dot" );
+
+   if (!(gfp=fopen( strcat(fname,tmp) ,"wt") ) ) return 1; /*can't create the output file */
+   
+   if (!uflist_int)
+   {
+        if(!(uflist_int=(struct trieNode*)malloc(sizeof(struct trieNode)) ) ) return 2; /* memory allocation failed*/
+        else
+            for (i=0;i<16;i++) 
+                    uflist_int->list[i]=NULL;
+   }
+   
+   fprintf(gfp,"digraph {\ngraph [];\nnode [fontcolor=black, style=filled, fontsize=20];\nedge [fontsize=14, arrowhead=vee, arrowsize=0.5];\n");
+   
+   graphRoot_int=graphRoot;
+   InterimRecTrieTraverse(graphRoot_int,0);
+
+   fprintf(gfp,"}\n");
+   
+   // recursively reset the uflist_int trie
+   InterimRecResetUFlist( uflist_int, 0 );
+   
+   fclose(gfp);
+   // gfp=NULL;
+   
+   return 0;
+}                                               
+
+//==============================================================================
+//==============================================================================
+//====   END of temporary implementation: to be removed in the final QUAD v2.0 release            ========
+//==============================================================================
+//==============================================================================
 
 //==============================================================================
 MAT_ERR_TYPE  RecordBinding(UINT16 producer, UINT16 consumer, ADDRINT add, UINT8 size, bool fresh)
